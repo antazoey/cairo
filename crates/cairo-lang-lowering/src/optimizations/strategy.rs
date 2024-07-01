@@ -1,5 +1,5 @@
 use cairo_lang_diagnostics::Maybe;
-use cairo_lang_utils::define_short_id;
+use cairo_lang_utils::{define_short_id, Intern, LookupIntern};
 
 use crate::db::LoweringGroup;
 use crate::ids::ConcreteFunctionWithBodyId;
@@ -37,7 +37,7 @@ pub enum OptimizationPhase {
 impl OptimizationPhase {
     /// Applies the optimization phase to the lowering.
     ///
-    /// Assumes `lowered` is a a lowering of `function`.
+    /// Assumes `lowered` is a lowering of `function`.
     pub fn apply(
         self,
         db: &dyn LoweringGroup,
@@ -65,7 +65,8 @@ define_short_id!(
     OptimizationStrategyId,
     OptimizationStrategy,
     LoweringGroup,
-    lookup_intern_strategy
+    lookup_intern_strategy,
+    intern_strategy
 );
 
 /// A strategy is a sequence of optimization phases.
@@ -75,14 +76,14 @@ pub struct OptimizationStrategy(pub Vec<OptimizationPhase>);
 impl OptimizationStrategyId {
     /// Applies the optimization strategy phase to the lowering.
     ///
-    /// Assumes `lowered` is a a lowering of `function`.
+    /// Assumes `lowered` is a lowering of `function`.
     pub fn apply_strategy(
         self,
         db: &dyn LoweringGroup,
         function: ConcreteFunctionWithBodyId,
         lowered: &mut FlatLowered,
     ) -> Maybe<()> {
-        for phase in db.lookup_intern_strategy(self).0 {
+        for phase in self.lookup_intern(db).0 {
             phase.apply(db, function, lowered)?;
         }
 
@@ -92,7 +93,7 @@ impl OptimizationStrategyId {
 
 /// Query implementation of [crate::db::LoweringGroup::baseline_optimization_strategy].
 pub fn baseline_optimization_strategy(db: &dyn LoweringGroup) -> OptimizationStrategyId {
-    db.intern_strategy(OptimizationStrategy(vec![
+    OptimizationStrategy(vec![
         OptimizationPhase::ApplyInlining,
         OptimizationPhase::ReturnOptimization,
         OptimizationPhase::ReorganizeBlocks,
@@ -112,16 +113,18 @@ pub fn baseline_optimization_strategy(db: &dyn LoweringGroup) -> OptimizationStr
         OptimizationPhase::CancelOps,
         OptimizationPhase::ReorderStatements,
         OptimizationPhase::ReorganizeBlocks,
-    ]))
+    ])
+    .intern(db)
 }
 
 /// Query implementation of [crate::db::LoweringGroup::final_optimization_strategy].
 pub fn final_optimization_strategy(db: &dyn LoweringGroup) -> OptimizationStrategyId {
-    db.intern_strategy(OptimizationStrategy(vec![
+    OptimizationStrategy(vec![
         OptimizationPhase::LowerImplicits,
         OptimizationPhase::ReorganizeBlocks,
         OptimizationPhase::CancelOps,
         OptimizationPhase::ReorderStatements,
         OptimizationPhase::ReorganizeBlocks,
-    ]))
+    ])
+    .intern(db)
 }

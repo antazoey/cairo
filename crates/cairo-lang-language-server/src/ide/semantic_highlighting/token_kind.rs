@@ -1,17 +1,14 @@
-use cairo_lang_defs::ids::{
-    FileIndex, FunctionWithBodyId, ImplItemId, LookupItemId, ModuleFileId, ModuleItemId,
-};
-use cairo_lang_filesystem::ids::FileId;
 use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_semantic::items::function_with_body::SemanticExprLookup;
+use cairo_lang_semantic::lookup_item::LookupItemEx;
 use cairo_lang_semantic::resolve::{ResolvedConcreteItem, ResolvedGenericItem};
 use cairo_lang_syntax::node::kind::SyntaxKind;
 use cairo_lang_syntax::node::utils::grandparent_kind;
 use cairo_lang_syntax::node::{ast, SyntaxNode, Terminal, TypedSyntaxNode};
-use cairo_lang_utils::OptionHelper;
+use cairo_lang_utils::Upcast;
 use tower_lsp::lsp_types::SemanticTokenType;
 
-use crate::{find_node_module, lookup_item_from_ast};
+use crate::lang::db::{AnalysisDatabase, LsSemanticGroup};
 
 #[allow(dead_code)]
 pub enum SemanticTokenKind {
@@ -38,11 +35,7 @@ pub enum SemanticTokenKind {
     GenericParamImpl,
 }
 impl SemanticTokenKind {
-    pub fn from_syntax_node(
-        db: &dyn SemanticGroup,
-        file_id: FileId,
-        mut node: SyntaxNode,
-    ) -> Option<Self> {
+    pub fn from_syntax_node(db: &AnalysisDatabase, mut node: SyntaxNode) -> Option<Self> {
         let syntax_db = db.upcast();
         let mut expr_path_ptr = None;
         let kind = node.kind(syntax_db);
@@ -126,11 +119,6 @@ impl SemanticTokenKind {
         // Identifier.
         while let Some(parent) = node.parent() {
             node = parent;
-            let module_id = find_node_module(db, file_id, node.clone()).on_none(|| {
-                eprintln!("SemanticTokenKind recovery failed. Failed to find module.");
-            })?;
-            let file_index = FileIndex(0);
-            let module_file_id = ModuleFileId(module_id, file_index);
 
             match node.kind(syntax_db) {
                 SyntaxKind::ExprInlineMacro => return Some(SemanticTokenKind::InlineMacro),
@@ -145,14 +133,13 @@ impl SemanticTokenKind {
                 _ => {}
             };
 
-            let lookup_items = lookup_item_from_ast(db, module_file_id, node.clone());
-            for lookup_item_id in lookup_items {
+            for lookup_item_id in db.collect_lookup_items_leaf(&node)? {
                 // Resolved items.
                 if let Some(item) =
                     db.lookup_resolved_generic_item_by_ptr(lookup_item_id, identifier.stable_ptr())
                 {
                     return Some(match item {
-                        ResolvedGenericItem::Constant(_) => SemanticTokenKind::EnumMember,
+                        ResolvedGenericItem::GenericConstant(_) => SemanticTokenKind::EnumMember,
                         ResolvedGenericItem::Module(_) => SemanticTokenKind::Namespace,
                         ResolvedGenericItem::GenericFunction(_)
                         | ResolvedGenericItem::TraitFunction(_) => SemanticTokenKind::Function,
@@ -163,7 +150,7 @@ impl SemanticTokenKind {
                         ResolvedGenericItem::Impl(_) | ResolvedGenericItem::GenericImplAlias(_) => {
                             SemanticTokenKind::Class
                         }
-                        ResolvedGenericItem::Variable(_, _) => SemanticTokenKind::Variable,
+                        ResolvedGenericItem::Variable(_) => SemanticTokenKind::Variable,
                     });
                 }
                 if let Some(item) =
@@ -174,8 +161,7 @@ impl SemanticTokenKind {
                         ResolvedConcreteItem::Module(_) => SemanticTokenKind::Namespace,
                         ResolvedConcreteItem::Function(_)
                         | ResolvedConcreteItem::TraitFunction(_) => SemanticTokenKind::Function,
-                        ResolvedConcreteItem::Type(_)
-                        | ResolvedConcreteItem::ConstGenericParameter(_) => SemanticTokenKind::Type,
+                        ResolvedConcreteItem::Type(_) => SemanticTokenKind::Type,
                         ResolvedConcreteItem::Variant(_) => SemanticTokenKind::EnumMember,
                         ResolvedConcreteItem::Trait(_) => SemanticTokenKind::Interface,
                         ResolvedConcreteItem::Impl(_) => SemanticTokenKind::Class,
@@ -183,16 +169,8 @@ impl SemanticTokenKind {
                 }
 
                 // Exprs and patterns..
-                let function_id = match lookup_item_id {
-                    LookupItemId::ModuleItem(ModuleItemId::FreeFunction(free_function_id)) => {
-                        FunctionWithBodyId::Free(free_function_id)
-                    }
-                    LookupItemId::ImplItem(ImplItemId::Function(impl_function_id)) => {
-                        FunctionWithBodyId::Impl(impl_function_id)
-                    }
-                    _ => {
-                        continue;
-                    }
+                let Some(function_id) = lookup_item_id.function_with_body() else {
+                    continue;
                 };
                 if let Some(expr_path_ptr) = expr_path_ptr {
                     if db.lookup_pattern_by_ptr(function_id, expr_path_ptr.into()).is_ok() {

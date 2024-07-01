@@ -5,7 +5,7 @@ use cairo_lang_syntax::attribute::structured::{AttributeArg, AttributeArgVariant
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::{PathSegmentEx, QueryAttrs};
 use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
-use cairo_lang_utils::try_extract_matches;
+use cairo_lang_utils::{require, try_extract_matches};
 use indoc::{formatdoc, indoc};
 use itertools::chain;
 
@@ -33,9 +33,15 @@ impl ComponentSpecificGenerationData {
         RewriteNode::interpolate_patched(
             indoc! {"
             use starknet::storage::{
-                StorageMapMemberAddressTrait, StorageMemberAddressTrait,
-                StorageMapMemberAccessTrait, StorageMemberAccessTrait,
+                StorageMapReadAccessTrait, StorageMapWriteAccessTrait, 
+                StorableStoragePointerReadAccess, StorableStoragePointerWriteAccess
             };
+            // TODO(Gil): This generates duplicate diagnostics because of the plugin system, squash the duplicates into one.
+            #[deprecated(
+                feature: \"deprecated_legacy_map\",
+                note: \"Use `starknet::storage::Map` instead.\"
+            )]
+            use starknet::storage::Map as LegacyMap;
             $has_component_trait$
 
             $generated_impls$"},
@@ -101,7 +107,7 @@ fn get_embeddable_as_attr_value(db: &dyn SyntaxGroup, attr: &ast::Attribute) -> 
     let [arg] = &attribute_args.arguments(db).elements(db)[..] else {
         return None;
     };
-    let AttributeArgVariant::Unnamed { value: attr_arg_value, .. } =
+    let AttributeArgVariant::Unnamed(attr_arg_value) =
         AttributeArg::from_ast(arg.clone(), db).variant
     else {
         return None;
@@ -420,9 +426,7 @@ fn handle_first_param_for_embeddable_as(
     db: &dyn SyntaxGroup,
     param: &ast::Param,
 ) -> Option<(String, String, String)> {
-    if param.name(db).text(db) != "self" {
-        return None;
-    }
+    require(param.name(db).text(db) == "self")?;
     if param.is_ref_param(db) {
         return if param.type_clause(db).ty(db).is_name_with_arg(
             db,

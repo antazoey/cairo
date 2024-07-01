@@ -17,6 +17,7 @@ mod entry_point;
 pub mod events;
 mod starknet_module;
 mod storage;
+pub(crate) mod storage_node;
 mod utils;
 
 use dispatcher::handle_trait;
@@ -81,5 +82,9 @@ impl MacroPlugin for StarkNetPlugin {
             STORAGE_ATTR.to_string(),
             SUBSTORAGE_ATTR.to_string(),
         ]
+    }
+
+    fn declared_derives(&self) -> Vec<String> {
+        vec!["starknet::Event".to_string(), "starknet::Store".to_string()]
     }
 }

@@ -10,6 +10,7 @@ use cairo_lang_syntax::node::ast::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::kind::SyntaxKind;
 use cairo_lang_syntax::node::Token;
+use cairo_lang_utils::require;
 use smol_str::SmolStr;
 
 pub struct Lexer<'a> {
@@ -207,6 +208,7 @@ impl<'a> Lexer<'a> {
             "implicits" => TokenKind::Implicits,
             "ref" => TokenKind::Ref,
             "mut" => TokenKind::Mut,
+            "for" => TokenKind::For,
             "nopanic" => TokenKind::NoPanic,
             "pub" => TokenKind::Pub,
             "_" => TokenKind::Underscore,
@@ -323,9 +325,7 @@ impl Iterator for Lexer<'_> {
     /// Returns the next token. Once there are no more tokens left, returns token EOF.
     /// One should not call this after EOF was returned. If one does, None is returned.
     fn next(&mut self) -> Option<Self::Item> {
-        if self.done {
-            return None;
-        }
+        require(!self.done)?;
         let lexer_terminal = self.match_terminal();
         if lexer_terminal.kind == SyntaxKind::TerminalEndOfFile {
             self.done = true;
@@ -362,6 +362,7 @@ enum TokenKind {
     Match,
     If,
     While,
+    For,
     Loop,
     Continue,
     Break,
@@ -449,6 +450,7 @@ fn token_kind_to_terminal_syntax_kind(kind: TokenKind) -> SyntaxKind {
         TokenKind::Match => SyntaxKind::TerminalMatch,
         TokenKind::If => SyntaxKind::TerminalIf,
         TokenKind::While => SyntaxKind::TerminalWhile,
+        TokenKind::For => SyntaxKind::TerminalFor,
         TokenKind::Loop => SyntaxKind::TerminalLoop,
         TokenKind::Continue => SyntaxKind::TerminalContinue,
         TokenKind::Break => SyntaxKind::TerminalBreak,

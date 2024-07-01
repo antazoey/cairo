@@ -1,8 +1,8 @@
 use std::fs;
 use std::io::BufReader;
 
-use cairo_felt::Felt252;
 use cairo_lang_test_utils::compare_contents_or_fix_with_path;
+use starknet_types_core::felt::Felt as Felt252;
 use test_case::test_case;
 
 use crate::casm_contract_class::{BigUintAsHex, CasmContractClass, StarknetSierraCompilationError};
@@ -27,6 +27,7 @@ fn test_casm_contract_from_contract_class_failure(name: &str) {
 /// Tests that the casm compiled from a contract in the contract_crate is the same as in
 /// <test_case>.compiled_contract_class.json.
 #[test_case("account__account")]
+#[test_case("circuit_contract__circuit_contract")]
 #[test_case("test_contract__test_contract")]
 #[test_case("new_syntax_test_contract__counter_contract")]
 #[test_case("minimal_contract__minimal_contract")]

@@ -3,7 +3,7 @@
 mod test;
 
 use cairo_lang_semantic as semantic;
-use cairo_lang_utils::extract_matches;
+use cairo_lang_utils::{extract_matches, require};
 use itertools::Itertools;
 use semantic::MatchArmSelector;
 
@@ -84,9 +84,7 @@ impl ReturnOptimizerContext<'_> {
         let MatchInfo::Enum(MatchEnumInfo { input, arms, .. }) = match_info else {
             return None;
         };
-        if arms.is_empty() {
-            return None;
-        }
+        require(!arms.is_empty())?;
 
         let input_info = self.get_var_info(input);
         let mut opt_last_info = None;
@@ -94,9 +92,7 @@ impl ReturnOptimizerContext<'_> {
             let mut curr_info = info.clone();
             curr_info.apply_match_arm(self.is_droppable(input.var_id), &input_info, arm);
 
-            if !curr_info.early_return_possible() {
-                return None;
-            }
+            require(curr_info.early_return_possible())?;
 
             match curr_info.opt_return_info {
                 Some(return_info)
@@ -316,7 +312,7 @@ pub struct AnalyzerInfo {
 }
 
 impl AnalyzerInfo {
-    /// Creates a state of the analyzer where the the return optimization is not applicable.
+    /// Creates a state of the analyzer where the return optimization is not applicable.
     fn invalidated() -> Self {
         AnalyzerInfo { opt_return_info: None }
     }
@@ -397,7 +393,7 @@ impl AnalyzerInfo {
         }
     }
 
-    /// Returns true if the an early return is possible according to 'self'.
+    /// Returns true if an early return is possible according to 'self'.
     fn early_return_possible(&self) -> bool {
         let Some(ReturnInfo { ref returned_vars, .. }) = self.opt_return_info else { return false };
 

@@ -1,10 +1,8 @@
-use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::vec::IntoIter;
 
 use anyhow::{bail, Context, Result};
-use cairo_felt::Felt252;
 use cairo_lang_compiler::db::RootDatabase;
 use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
 use cairo_lang_compiler::project::setup_project;
@@ -28,7 +26,8 @@ use cairo_lang_starknet::contract::ContractInfo;
 use cairo_lang_starknet::starknet_plugin_suite;
 use cairo_lang_test_plugin::test_config::{PanicExpectation, TestExpectation};
 use cairo_lang_test_plugin::{
-    compile_test_prepared_db, test_plugin_suite, TestCompilation, TestConfig,
+    compile_test_prepared_db, test_plugin_suite, TestCompilation, TestCompilationMetadata,
+    TestConfig, TestsCompilationConfig,
 };
 use cairo_lang_utils::casts::IntoOrPanic;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
@@ -37,6 +36,7 @@ use colored::Colorize;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use starknet_types_core::felt::Felt as Felt252;
 
 #[cfg(test)]
 mod test;
@@ -101,11 +101,11 @@ impl CompiledTestRunner {
 
         let TestsSummary { passed, failed, ignored, failed_run_results } = run_tests(
             if self.config.run_profiler == RunProfilerConfig::Cairo { db } else { None },
-            compiled.named_tests,
-            compiled.sierra_program,
-            compiled.function_set_costs,
-            compiled.contracts_info,
-            compiled.statements_functions,
+            compiled.metadata.named_tests,
+            compiled.sierra_program.program,
+            compiled.metadata.function_set_costs,
+            compiled.metadata.contracts_info,
+            compiled.metadata.statements_functions,
             &self.config,
         )?;
 
@@ -238,7 +238,7 @@ impl TestCompiler {
     pub fn build(&self) -> Result<TestCompilation> {
         compile_test_prepared_db(
             &self.db,
-            self.starknet,
+            TestsCompilationConfig { starknet: self.starknet, add_statements_functions: false },
             self.main_crate_ids.clone(),
             self.test_crate_ids.clone(),
         )
@@ -260,22 +260,27 @@ pub fn filter_test_cases(
     ignored: bool,
     filter: &str,
 ) -> (TestCompilation, usize) {
-    let total_tests_count = compiled.named_tests.len();
-    let named_tests = compiled.named_tests
+    let total_tests_count = compiled.metadata.named_tests.len();
+    let named_tests = compiled
+        .metadata
+        .named_tests
         .into_iter()
+        // Filtering unignored tests in `ignored` mode. Keep all tests in `include-ignored` mode.
+        .filter(|(_, test)| !ignored || test.ignored || include_ignored)
         .map(|(func, mut test)| {
-            // Un-ignoring all the tests in `include-ignored` mode.
-            if include_ignored {
+            // Un-ignoring all the tests in `include-ignored` and `ignored` mode.
+            if include_ignored || ignored {
                 test.ignored = false;
             }
             (func, test)
         })
         .filter(|(name, _)| name.contains(filter))
-        // Filtering unignored tests in `ignored` mode
-        .filter(|(_, test)| !ignored || test.ignored)
         .collect_vec();
     let filtered_out = total_tests_count - named_tests.len();
-    let tests = TestCompilation { named_tests, ..compiled };
+    let tests = TestCompilation {
+        sierra_program: compiled.sierra_program,
+        metadata: TestCompilationMetadata { named_tests, ..(compiled.metadata) },
+    };
     (tests, filtered_out)
 }
 
@@ -496,16 +501,12 @@ fn update_summary(
         // ```
         println!("    steps: {}", filtered.n_steps);
         println!("    memory holes: {}", filtered.n_memory_holes);
-        let print_resource_map = |m: HashMap<_, _>, name| {
-            if !m.is_empty() {
-                println!(
-                    "    {name}: ({})",
-                    m.into_iter().sorted().map(|(k, v)| format!(r#""{k}": {v}"#)).join(", ")
-                );
-            }
-        };
-        print_resource_map(filtered.builtin_instance_counter, "builtins");
-        print_resource_map(used_resources.syscalls, "syscalls");
+
+        print_resource_map(
+            filtered.builtin_instance_counter.into_iter().map(|(k, v)| (k.to_string(), v)),
+            "builtins",
+        );
+        print_resource_map(used_resources.syscalls.into_iter(), "syscalls");
     }
     if let Some(profiling_info) = profiling_info {
         let profiling_processor =
@@ -515,4 +516,16 @@ fn update_summary(
         println!("Profiling info:\n{processed_profiling_info}");
     }
     res_type.push(name);
+}
+
+/// Given an iterator of (String, usize) pairs, prints a usage map. E.g.:
+///     syscalls: ("EmitEvent": 2)
+///     syscalls: ("CallContract": 1)
+fn print_resource_map(m: impl ExactSizeIterator<Item = (String, usize)>, resource_type: &str) {
+    if m.len() != 0 {
+        println!(
+            "    {resource_type}: ({})",
+            m.into_iter().sorted().map(|(k, v)| format!(r#""{k}": {v}"#)).join(", ")
+        );
+    }
 }

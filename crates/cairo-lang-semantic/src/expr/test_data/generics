@@ -90,7 +90,6 @@ fn foo() {
     bar::<1, 1, 1, 1>();
     bar::<felt252, felt252>();
     bar::<felt252>();
-    // TODO(spapini): -1 should give a bounds check error.
     bar::<usize, -1, A>();
 }
 
@@ -116,15 +115,15 @@ error: Expected variable or constant, found type.
     bar::<felt252, felt252>();
                    ^*****^
 
-error: Trait has no implementation in context: core::traits::Neg::<core::integer::u32>
- --> lib.cairo:7:18
+error: The value does not fit within the range of type core::integer::u32.
+ --> lib.cairo:6:18
     bar::<usize, -1, A>();
                  ^^
 
-error: The value does not fit within the range of type core::integer::u32.
- --> lib.cairo:7:18
+error: Impl not found.
+ --> lib.cairo:6:22
     bar::<usize, -1, A>();
-                 ^^
+                     ^
 
 //! > ==========================================================================
 
@@ -160,11 +159,6 @@ error: Extern types with impl generics are not supported.
  --> lib.cairo:4:15
 extern type A<impl C: MyTrait<felt252>>;
               ^**********************^
-
-error: Non-impl generics following an impl generic in an extern function are not supported.
- --> lib.cairo:7:44
-extern fn ioo<T, impl C: MyTrait<felt252>, S>() nopanic;
-                                           ^
 
 error: Expected an impl of `test::MyTrait::<core::felt252>`. Got an impl of `test::AnotherTrait::<core::felt252>`.
  --> lib.cairo:14:11
@@ -550,9 +544,7 @@ test_function_diagnostics(expect_diagnostics: false)
 
 //! > function
 fn foo() {
-    bar::<{
-        1 + 2
-    }>();
+    bar::<{ 1 + 2 }>();
 }
 
 //! > function_name
@@ -574,9 +566,7 @@ test_function_diagnostics(expect_diagnostics: true)
 
 //! > function
 fn foo() {
-    let _s: S<{
-        1 - 2
-    }> = bar();
+    let _s: S<{ 1 - 2 }> = bar();
 }
 
 //! > function_name
@@ -584,15 +574,11 @@ foo
 
 //! > module_code
 extern type S<const N: felt252>;
-extern fn bar() -> S<{
-    3 + 8
-}> nopanic;
+extern fn bar() -> S<{ 3 + 8 }> nopanic;
 const K: felt252 = 98;
 mod A {
     fn f() {
-        let _x: super::S<{
-            super::K + 9
-        }> = super::bar();
+        let _x: super::S<{ super::K + 9 }> = super::bar();
     }
 }
 
@@ -600,14 +586,14 @@ mod A {
 
 //! > expected_diagnostics
 error: Unexpected argument type. Expected: "test::S::<-1>", found: "test::S::<11>".
- --> lib.cairo:16:10
-    }> = bar();
-         ^***^
+ --> lib.cairo:10:28
+    let _s: S<{ 1 - 2 }> = bar();
+                           ^***^
 
 error: Unexpected argument type. Expected: "test::S::<107>", found: "test::S::<11>".
- --> lib.cairo:10:14
-        }> = super::bar();
-             ^**********^
+ --> lib.cairo:6:46
+        let _x: super::S<{ super::K + 9 }> = super::bar();
+                                             ^**********^
 
 //! > ==========================================================================
 
@@ -649,9 +635,7 @@ fn foo() -> S<1> {
 foo
 
 //! > module_code
-fn bar<const N: felt252>() -> S<{
-    3 - 2
-}> {
+fn bar<const N: felt252>() -> S<{ 3 - 2 }> {
     S::<N> { field: 1 }
 }
 struct S<const N: felt252> {
@@ -662,9 +646,9 @@ struct S<const N: felt252> {
 
 //! > expected_diagnostics
 error: Unexpected return type. Expected: "test::S::<1>", found: "test::S::<N>".
- --> lib.cairo:3:4
-}> {
-   ^
+ --> lib.cairo:1:44
+fn bar<const N: felt252>() -> S<{ 3 - 2 }> {
+                                           ^
 
 //! > ==========================================================================
 

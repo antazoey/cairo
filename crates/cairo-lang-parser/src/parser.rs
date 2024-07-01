@@ -8,7 +8,7 @@ use cairo_lang_syntax::node::ast::*;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::kind::SyntaxKind;
 use cairo_lang_syntax::node::{SyntaxNode, Token, TypedSyntaxNode};
-use cairo_lang_utils::extract_matches;
+use cairo_lang_utils::{extract_matches, require, LookupIntern};
 use syntax::node::green::{GreenNode, GreenNodeDetails};
 use syntax::node::ids::GreenId;
 
@@ -667,9 +667,7 @@ impl<'a> Parser<'a> {
 
     /// Returns a GreenId of node with pub visibility or None if not starting with "pub".
     fn try_parse_visibility_pub(&mut self) -> Option<VisibilityPubGreen> {
-        if self.peek().kind != SyntaxKind::TerminalPub {
-            return None;
-        }
+        require(self.peek().kind == SyntaxKind::TerminalPub)?;
         let pub_kw = self.take::<TerminalPub>();
         let argument_clause = if self.peek().kind != SyntaxKind::TerminalLParen {
             OptionVisibilityPubArgumentClauseEmpty::new_green(self.db).into()
@@ -849,14 +847,14 @@ impl<'a> Parser<'a> {
     }
 
     /// Assumes the current token is Impl.
-    /// Expected pattern: `impl <name> of <trait_path>;`
+    /// Expected pattern: `impl <name>: <trait_path>;`
     fn expect_trait_item_impl(&mut self, attributes: AttributeListGreen) -> TraitItemImplGreen {
         let impl_kw = self.take::<TerminalImpl>();
         let name = self.parse_identifier();
-        let of_kw = self.take::<TerminalOf>();
+        let colon = self.parse_token::<TerminalColon>();
         let trait_path = self.parse_type_path();
         let semicolon = self.parse_token::<TerminalSemicolon>();
-        TraitItemImpl::new_green(self.db, attributes, impl_kw, name, of_kw, trait_path, semicolon)
+        TraitItemImpl::new_green(self.db, attributes, impl_kw, name, colon, trait_path, semicolon)
     }
 
     /// Assumes the current token is Impl.
@@ -1195,6 +1193,9 @@ impl<'a> Parser<'a> {
             SyntaxKind::TerminalWhile if lbrace_allowed == LbraceAllowed::Allow => {
                 Ok(self.expect_while_expr().into())
             }
+            SyntaxKind::TerminalFor if lbrace_allowed == LbraceAllowed::Allow => {
+                Ok(self.expect_for_expr().into())
+            }
 
             _ => {
                 // TODO(yuval): report to diagnostics.
@@ -1396,7 +1397,7 @@ impl<'a> Parser<'a> {
         let GreenNode {
             kind: SyntaxKind::ExprPath,
             details: GreenNodeDetails::Node { children: children0, .. },
-        } = &*self.db.lookup_intern_green(expr.0)
+        } = &*expr.0.lookup_intern(self.db)
         else {
             return None;
         };
@@ -1410,7 +1411,7 @@ impl<'a> Parser<'a> {
         let GreenNode {
             kind: SyntaxKind::PathSegmentSimple,
             details: GreenNodeDetails::Node { children: children1, .. },
-        } = &*self.db.lookup_intern_green(path_segment)
+        } = &*path_segment.lookup_intern(self.db)
         else {
             return None;
         };
@@ -1422,7 +1423,7 @@ impl<'a> Parser<'a> {
 
         // Check that it is indeed `TerminalIdentifier`.
         let GreenNode { kind: SyntaxKind::TerminalIdentifier, .. } =
-            self.db.lookup_intern_green(ident).as_ref()
+            ident.lookup_intern(self.db).as_ref()
         else {
             return None;
         };
@@ -1689,6 +1690,28 @@ impl<'a> Parser<'a> {
         ExprWhile::new_green(self.db, while_kw, condition, body)
     }
 
+    /// Assumes the current token is `For`.
+    /// Expected pattern: `for <pattern> <identifier> <expression> <block>`.
+    /// Identifier will be checked to be 'in' in semantics.
+    fn expect_for_expr(&mut self) -> ExprForGreen {
+        let for_kw = self.take::<TerminalFor>();
+        let pattern = self.parse_pattern();
+        let ident = self.take_raw();
+        let in_identifier: TerminalIdentifierGreen = match ident.text.as_str() {
+            "in" => self.add_trivia_to_terminal::<TerminalIdentifier>(ident),
+            _ => {
+                self.append_skipped_token_to_pending_trivia(
+                    ident,
+                    ParserDiagnosticKind::SkippedElement { element_name: "'in'".into() },
+                );
+                TerminalIdentifier::missing(self.db)
+            }
+        };
+        let expression = self.parse_expr_limited(MAX_PRECEDENCE, LbraceAllowed::Forbid);
+        let body = self.parse_block();
+        ExprFor::new_green(self.db, for_kw, pattern, in_identifier, expression, body)
+    }
+
     /// Assumes the current token is LBrack.
     /// Expected pattern: `\[<expr>; <expr>\]`.
     fn expect_fixed_size_array_expr(&mut self) -> ExprFixedSizeArrayGreen {
@@ -1786,7 +1809,7 @@ impl<'a> Parser<'a> {
                         PatternEnum::new_green(self.db, path, inner_pattern.into()).into()
                     }
                     _ => {
-                        let green_node = self.db.lookup_intern_green(path.0);
+                        let green_node = path.0.lookup_intern(self.db);
                         let children = match &green_node.details {
                             GreenNodeDetails::Node { children, width: _ } => children,
                             _ => return Err(TryParseFailure::SkipToken),
@@ -2280,6 +2303,8 @@ impl<'a> Parser<'a> {
                 ExprUnary::new_green(self.db, op, expr).into()
             }
             SyntaxKind::TerminalShortString => self.take_terminal_short_string().into(),
+            SyntaxKind::TerminalTrue => self.take::<TerminalTrue>().into(),
+            SyntaxKind::TerminalFalse => self.take::<TerminalFalse>().into(),
             SyntaxKind::TerminalLBrace => self.parse_block().into(),
             _ => self.try_parse_type_expr()?,
         };
@@ -2830,7 +2855,7 @@ fn trivia_total_width(db: &dyn SyntaxGroup, trivia: &[TriviumGreen]) -> TextWidt
 
 /// The width of the trailing trivia, traversing the tree to the bottom right node.
 fn trailing_trivia_width(db: &dyn SyntaxGroup, green_id: GreenId) -> Option<TextWidth> {
-    let node = db.lookup_intern_green(green_id);
+    let node = green_id.lookup_intern(db);
     if node.kind == SyntaxKind::Trivia {
         return Some(node.width());
     }

@@ -1,8 +1,5 @@
-use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_filesystem::ids::FileId;
 use cairo_lang_filesystem::span::TextOffset;
 use cairo_lang_parser::db::ParserGroup;
-use cairo_lang_semantic::db::SemanticGroup;
 use cairo_lang_syntax as syntax;
 use cairo_lang_syntax::node::ast::{self};
 use cairo_lang_syntax::node::kind::SyntaxKind;
@@ -14,6 +11,7 @@ use tracing::error;
 
 use self::encoder::{EncodedToken, TokenEncoder};
 pub use self::token_kind::SemanticTokenKind;
+use crate::lang::db::AnalysisDatabase;
 use crate::lang::lsp::LsProtoGroup;
 
 mod encoder;
@@ -27,17 +25,17 @@ mod token_kind;
 )]
 pub fn semantic_highlight_full(
     params: SemanticTokensParams,
-    db: &RootDatabase,
+    db: &AnalysisDatabase,
 ) -> Option<SemanticTokensResult> {
     let file_uri = params.text_document.uri;
-    let file = db.file_for_url(&file_uri);
+    let file = db.file_for_url(&file_uri)?;
     let Ok(node) = db.file_syntax(file) else {
         error!("semantic analysis failed: file '{file_uri}' does not exist");
         return None;
     };
 
     let mut data: Vec<SemanticToken> = Vec::new();
-    SemanticTokensTraverser::default().find_semantic_tokens(db.upcast(), file, &mut data, node);
+    SemanticTokensTraverser::default().find_semantic_tokens(db.upcast(), &mut data, node);
     Some(SemanticTokensResult::Tokens(SemanticTokens { result_id: None, data }))
 }
 
@@ -54,8 +52,7 @@ struct SemanticTokensTraverser {
 impl SemanticTokensTraverser {
     pub fn find_semantic_tokens(
         &mut self,
-        db: &dyn SemanticGroup,
-        file_id: FileId,
+        db: &AnalysisDatabase,
         data: &mut Vec<SemanticToken>,
         node: SyntaxNode,
     ) {
@@ -72,7 +69,7 @@ impl SemanticTokensTraverser {
                 let maybe_semantic_kind = self
                     .offset_to_kind_lookahead
                     .remove(&node.offset())
-                    .or_else(|| SemanticTokenKind::from_syntax_node(db, file_id, node));
+                    .or_else(|| SemanticTokenKind::from_syntax_node(db, node));
                 if let Some(semantic_kind) = maybe_semantic_kind {
                     let EncodedToken { delta_line, delta_start } = self.encoder.encode(width);
                     data.push(SemanticToken {
@@ -125,7 +122,7 @@ impl SemanticTokensTraverser {
                     _ => {}
                 }
                 for child in children.iter() {
-                    self.find_semantic_tokens(db, file_id, data, child.clone());
+                    self.find_semantic_tokens(db, data, child.clone());
                 }
             }
         }

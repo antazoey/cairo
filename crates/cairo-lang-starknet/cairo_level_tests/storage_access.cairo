@@ -12,9 +12,6 @@ impl StorageAddressPartialEq of PartialEq<StorageAddress> {
     fn eq(lhs: @StorageAddress, rhs: @StorageAddress) -> bool {
         storage_address_to_felt252(*lhs) == storage_address_to_felt252(*rhs)
     }
-    fn ne(lhs: @StorageAddress, rhs: @StorageAddress) -> bool {
-        !(storage_address_to_felt252(*lhs) == storage_address_to_felt252(*rhs))
-    }
 }
 
 #[derive(Copy, Drop, Debug, Serde, PartialEq, starknet::Store)]
@@ -47,6 +44,7 @@ enum Efg {
 }
 
 #[derive(Copy, Drop, Debug, Serde, PartialEq, starknet::Store)]
+#[starknet::sub_pointers]
 struct AbcEtc {
     a: u8,
     b: u16,
@@ -102,6 +100,16 @@ mod test_contract {
     }
 
     #[external(v0)]
+    pub fn get_data_f_high(self: @ContractState) -> u128 {
+        self.data.f.high.read()
+    }
+
+    #[external(v0)]
+    pub fn get_data_f_low(self: @ContractState) -> u128 {
+        self.data.f.low.read()
+    }
+
+    #[external(v0)]
     pub fn set_byte_arrays(ref self: ContractState, value: ByteArrays) {
         self.byte_arrays.write(value);
     }
@@ -130,7 +138,7 @@ fn write_read_struct() {
         c: 3_u32,
         d: 4_u64,
         e: 5_u128,
-        f: BoundedInt::max(),
+        f: BoundedInt::max() - 1,
         g: Zeroable::zero(),
         h: Zeroable::zero(),
         i: storage_address_try_from_felt252(123_felt252).unwrap(),
@@ -144,6 +152,14 @@ fn write_read_struct() {
 
     assert!(test_contract::__external::set_data(serialized(x)).is_empty());
     assert_eq!(deserialized(test_contract::__external::get_data(serialized(()))), x);
+    assert_eq!(
+        deserialized(test_contract::__external::get_data_f_low(serialized(()))),
+        BoundedInt::max() - 1_u128
+    );
+    assert_eq!(
+        deserialized(test_contract::__external::get_data_f_high(serialized(()))),
+        BoundedInt::<u128>::max()
+    );
 }
 
 #[test]

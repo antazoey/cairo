@@ -1,7 +1,7 @@
 //! > Expansion of a contract with a component with conflicting interfaces.
 
 //! > test_runner_name
-ExpandContractTestRunner(expect_diagnostics: true)
+ExpandContractTestRunner(expect_diagnostics: warnings_only)
 
 //! > cairo_code
 >>> file: test_data/interfaces.cairo
@@ -74,6 +74,9 @@ mod counter_contract {
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 Interface1DispatcherTrait:
 
 trait Interface1DispatcherTrait<T> {
@@ -167,6 +170,9 @@ impl Interface1SafeDispatcherImpl of Interface1SafeDispatcherTrait<Interface1Saf
 }
 
 
+lib.cairo:6:1
+#[starknet::interface]
+^********************^
 Interface2DispatcherTrait:
 
 trait Interface2DispatcherTrait<T> {
@@ -260,6 +266,9 @@ impl Interface2SafeDispatcherImpl of Interface2SafeDispatcherTrait<Interface2Saf
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl Interface1DispatcherCopy of core::traits::Copy::<Interface1Dispatcher>;
@@ -276,6 +285,9 @@ impl Interface1DispatcherSerde of core::serde::Serde::<Interface1Dispatcher> {
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreInterface1Dispatcher of starknet::Store::<Interface1Dispatcher> {
@@ -309,8 +321,13 @@ impl StoreInterface1Dispatcher of starknet::Store::<Interface1Dispatcher> {
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageInterface1Dispatcher of starknet::storage_access::DeriveStorage::<Interface1Dispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl Interface1LibraryDispatcherCopy of core::traits::Copy::<Interface1LibraryDispatcher>;
@@ -327,6 +344,9 @@ impl Interface1LibraryDispatcherSerde of core::serde::Serde::<Interface1LibraryD
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreInterface1LibraryDispatcher of starknet::Store::<Interface1LibraryDispatcher> {
@@ -360,8 +380,13 @@ impl StoreInterface1LibraryDispatcher of starknet::Store::<Interface1LibraryDisp
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageInterface1LibraryDispatcher of starknet::storage_access::DeriveStorage::<Interface1LibraryDispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl Interface1SafeLibraryDispatcherCopy of core::traits::Copy::<Interface1SafeLibraryDispatcher>;
@@ -378,6 +403,9 @@ impl Interface1SafeLibraryDispatcherSerde of core::serde::Serde::<Interface1Safe
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreInterface1SafeLibraryDispatcher of starknet::Store::<Interface1SafeLibraryDispatcher> {
@@ -411,8 +439,13 @@ impl StoreInterface1SafeLibraryDispatcher of starknet::Store::<Interface1SafeLib
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageInterface1SafeLibraryDispatcher of starknet::storage_access::DeriveStorage::<Interface1SafeLibraryDispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl Interface1SafeDispatcherCopy of core::traits::Copy::<Interface1SafeDispatcher>;
@@ -429,6 +462,9 @@ impl Interface1SafeDispatcherSerde of core::serde::Serde::<Interface1SafeDispatc
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreInterface1SafeDispatcher of starknet::Store::<Interface1SafeDispatcher> {
@@ -462,8 +498,13 @@ impl StoreInterface1SafeDispatcher of starknet::Store::<Interface1SafeDispatcher
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageInterface1SafeDispatcher of starknet::storage_access::DeriveStorage::<Interface1SafeDispatcher> {}
 
 
+lib.cairo:6:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl Interface2DispatcherCopy of core::traits::Copy::<Interface2Dispatcher>;
@@ -480,6 +521,9 @@ impl Interface2DispatcherSerde of core::serde::Serde::<Interface2Dispatcher> {
 }
 
 
+lib.cairo:6:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreInterface2Dispatcher of starknet::Store::<Interface2Dispatcher> {
@@ -513,8 +557,13 @@ impl StoreInterface2Dispatcher of starknet::Store::<Interface2Dispatcher> {
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageInterface2Dispatcher of starknet::storage_access::DeriveStorage::<Interface2Dispatcher> {}
 
 
+lib.cairo:6:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl Interface2LibraryDispatcherCopy of core::traits::Copy::<Interface2LibraryDispatcher>;
@@ -531,6 +580,9 @@ impl Interface2LibraryDispatcherSerde of core::serde::Serde::<Interface2LibraryD
 }
 
 
+lib.cairo:6:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreInterface2LibraryDispatcher of starknet::Store::<Interface2LibraryDispatcher> {
@@ -564,8 +616,13 @@ impl StoreInterface2LibraryDispatcher of starknet::Store::<Interface2LibraryDisp
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageInterface2LibraryDispatcher of starknet::storage_access::DeriveStorage::<Interface2LibraryDispatcher> {}
 
 
+lib.cairo:6:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl Interface2SafeLibraryDispatcherCopy of core::traits::Copy::<Interface2SafeLibraryDispatcher>;
@@ -582,6 +639,9 @@ impl Interface2SafeLibraryDispatcherSerde of core::serde::Serde::<Interface2Safe
 }
 
 
+lib.cairo:6:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreInterface2SafeLibraryDispatcher of starknet::Store::<Interface2SafeLibraryDispatcher> {
@@ -615,8 +675,13 @@ impl StoreInterface2SafeLibraryDispatcher of starknet::Store::<Interface2SafeLib
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageInterface2SafeLibraryDispatcher of starknet::storage_access::DeriveStorage::<Interface2SafeLibraryDispatcher> {}
 
 
+lib.cairo:6:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl Interface2SafeDispatcherCopy of core::traits::Copy::<Interface2SafeDispatcher>;
@@ -633,6 +698,9 @@ impl Interface2SafeDispatcherSerde of core::serde::Serde::<Interface2SafeDispatc
 }
 
 
+lib.cairo:6:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreInterface2SafeDispatcher of starknet::Store::<Interface2SafeDispatcher> {
@@ -666,8 +734,13 @@ impl StoreInterface2SafeDispatcher of starknet::Store::<Interface2SafeDispatcher
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageInterface2SafeDispatcher of starknet::storage_access::DeriveStorage::<Interface2SafeDispatcher> {}
 
 
+lib.cairo:11:1
+#[starknet::component]
+^********************^
 component:
 
 #[event]
@@ -675,25 +748,62 @@ component:
 pub enum Event {}
 
 
-    pub struct ComponentState<TContractState> {
-    }
-    impl ComponentStateDrop<TContractState> of Drop<ComponentState<TContractState>> {}
-    #[inline(always)]
-    pub fn unsafe_new_component_state<TContractState>() -> ComponentState<TContractState> {
-        ComponentState::<TContractState> {
+#[derive(Drop, Copy)]
+struct ComponentStorageBase {
+}
+#[derive(Drop, Copy)]
+struct ComponentStorageBaseMut {
+}
+impl StorageBaseImpl<TContractState> of starknet::storage::StorageBaseTrait<ComponentState<TContractState>> {
+    type BaseType = ComponentStorageBase;
+    type BaseMutType = ComponentStorageBaseMut;
+    fn storage_base(self: @ComponentState<TContractState>) -> ComponentStorageBase {
+        ComponentStorageBase {
         }
     }
-    #[cfg(test)]
-    #[inline(always)]
-    pub fn component_state_for_testing<TContractState>() -> ComponentState<TContractState> {
-        unsafe_new_component_state::<TContractState>()
+    fn storage_base_mut(ref self: ComponentState<TContractState>) -> ComponentStorageBaseMut {
+        ComponentStorageBaseMut {
+        }
     }
-    
+}
+pub struct ComponentState<TContractState> {
+}
+
+impl ComponentStateDrop<TContractState> of Drop<ComponentState<TContractState>> {}
+ 
+impl ComponentStateDeref<TContractState> of core::ops::SnapshotDeref<ComponentState<TContractState>> {
+    type Target = ComponentStorageBase;
+    fn snapshot_deref(self: @ComponentState<TContractState>) -> ComponentStorageBase {
+        self.storage_base()
+    }
+}
+impl ComponentStateDerefMut<TContractState> of core::ops::DerefMut<ComponentState<TContractState>> {
+    type Target = ComponentStorageBaseMut;
+    fn deref_mut(ref self: ComponentState<TContractState>) -> ComponentStorageBaseMut {
+        self.storage_base_mut()
+    }
+}
+pub fn unsafe_new_component_state<TContractState>() -> ComponentState<TContractState> {
+    ComponentState::<TContractState> {
+    }
+}
+#[cfg(target: 'test')]
+#[inline(always)]
+pub fn component_state_for_testing<TContractState>() -> ComponentState<TContractState> {
+    unsafe_new_component_state::<TContractState>()
+}
+
 
 use starknet::storage::{
-    StorageMapMemberAddressTrait, StorageMemberAddressTrait,
-    StorageMapMemberAccessTrait, StorageMemberAccessTrait,
+    StorageMapReadAccessTrait, StorageMapWriteAccessTrait, 
+    StorableStoragePointerReadAccess, StorableStoragePointerWriteAccess
 };
+// TODO(Gil): This generates duplicate diagnostics because of the plugin system, squash the duplicates into one.
+#[deprecated(
+    feature: "deprecated_legacy_map",
+    note: "Use `starknet::storage::Map` instead."
+)]
+use starknet::storage::Map as LegacyMap;
 pub trait HasComponent<TContractState> {
     fn get_component(self: @TContractState) -> @ComponentState<TContractState>;
     fn get_component_mut(ref self: TContractState) -> ComponentState<TContractState>;
@@ -734,11 +844,17 @@ pub impl I2I<
     }
 }
 
+lib.cairo:11:1
+#[starknet::component]
+^********************^
 impls:
 
 impl EventDrop of core::traits::Drop::<Event>;
 
 
+lib.cairo:11:1
+#[starknet::component]
+^********************^
 starknet_derive:
 
 impl EventIsEvent of starknet::Event<Event> {
@@ -758,6 +874,27 @@ impl EventIsEvent of starknet::Event<Event> {
 
 
 
+lib.cairo:11:1
+#[starknet::component]
+^********************^
+impls:
+
+impl ComponentStorageBaseDrop of core::traits::Drop::<ComponentStorageBase>;
+impl ComponentStorageBaseCopy of core::traits::Copy::<ComponentStorageBase>;
+
+
+lib.cairo:11:1
+#[starknet::component]
+^********************^
+impls:
+
+impl ComponentStorageBaseMutDrop of core::traits::Drop::<ComponentStorageBaseMut>;
+impl ComponentStorageBaseMutCopy of core::traits::Copy::<ComponentStorageBaseMut>;
+
+
+lib.cairo:16:5
+    #[embeddable_as(I1I1)]
+    ^********************^
 embeddable:
 
 pub trait UnsafeNewContractStateTraitForI1I1<
@@ -766,7 +903,7 @@ pub trait UnsafeNewContractStateTraitForI1I1<
     fn unsafe_new_contract_state() -> TContractState;
 }
 
-#[implicit_precedence(Pedersen, RangeCheck, Bitwise, EcOp, Poseidon, SegmentArena, GasBuiltin, System)]
+#[implicit_precedence(Pedersen, RangeCheck, Bitwise, core::ec::EcOp, Poseidon, SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, GasBuiltin, System)]
 fn __wrapper__I1I1__foo<TContractState, impl X: HasComponent<TContractState>
 , impl TContractStateDrop: Drop<TContractState>, impl UnsafeNewContractState: UnsafeNewContractStateTraitForI1I1<TContractState>>(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
@@ -798,6 +935,9 @@ pub mod __constructor_I1I1 {
 }
 
 
+lib.cairo:23:5
+    #[embeddable_as(I1I2)]
+    ^********************^
 embeddable:
 
 pub trait UnsafeNewContractStateTraitForI1I2<
@@ -806,7 +946,7 @@ pub trait UnsafeNewContractStateTraitForI1I2<
     fn unsafe_new_contract_state() -> TContractState;
 }
 
-#[implicit_precedence(Pedersen, RangeCheck, Bitwise, EcOp, Poseidon, SegmentArena, GasBuiltin, System)]
+#[implicit_precedence(Pedersen, RangeCheck, Bitwise, core::ec::EcOp, Poseidon, SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, GasBuiltin, System)]
 fn __wrapper__I1I2__foo<TContractState, impl X: HasComponent<TContractState>
 , impl TContractStateDrop: Drop<TContractState>, impl UnsafeNewContractState: UnsafeNewContractStateTraitForI1I2<TContractState>>(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
@@ -838,6 +978,9 @@ pub mod __constructor_I1I2 {
 }
 
 
+lib.cairo:30:5
+    #[embeddable_as(I2I)]
+    ^*******************^
 embeddable:
 
 pub trait UnsafeNewContractStateTraitForI2I<
@@ -846,7 +989,7 @@ pub trait UnsafeNewContractStateTraitForI2I<
     fn unsafe_new_contract_state() -> TContractState;
 }
 
-#[implicit_precedence(Pedersen, RangeCheck, Bitwise, EcOp, Poseidon, SegmentArena, GasBuiltin, System)]
+#[implicit_precedence(Pedersen, RangeCheck, Bitwise, core::ec::EcOp, Poseidon, SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, GasBuiltin, System)]
 fn __wrapper__I2I__foo<TContractState, impl X: HasComponent<TContractState>
 , impl TContractStateDrop: Drop<TContractState>, impl UnsafeNewContractState: UnsafeNewContractStateTraitForI2I<TContractState>>(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
@@ -878,30 +1021,74 @@ pub mod __constructor_I2I {
 }
 
 
+lib.cairo:38:1
+#[starknet::contract]
+^*******************^
 contract:
 
 
 
-    pub struct ContractState {
-        pub comp_storage: super::comp::ComponentState<ContractState>,
-    }
-    impl ContractStateDrop of Drop<ContractState> {}
-    #[inline(always)]
-    pub fn unsafe_new_contract_state() -> ContractState {
-        ContractState {
-            comp_storage: super::comp::unsafe_new_component_state::<ContractState>(),
+#[derive(Drop, Copy)]
+struct ContractStorageBase {
+    comp_storage: starknet::storage::StorageBase<super::comp::Storage>,
+}
+#[derive(Drop, Copy)]
+struct ContractStorageBaseMut {
+    comp_storage: starknet::storage::StorageBase<starknet::storage::Mutable<super::comp::Storage>>,
+}
+impl StorageBaseImpl of starknet::storage::StorageBaseTrait<ContractState> {
+    type BaseType = ContractStorageBase;
+    type BaseMutType = ContractStorageBaseMut;
+    fn storage_base(self: @ContractState) -> ContractStorageBase {
+        ContractStorageBase {
+           comp_storage: starknet::storage::StorageBase{ address: selector!("comp_storage") },
         }
     }
-    #[cfg(test)]
-    #[inline(always)]
-    pub fn contract_state_for_testing() -> ContractState {
-        unsafe_new_contract_state()
+    fn storage_base_mut(ref self: ContractState) -> ContractStorageBaseMut {
+        ContractStorageBaseMut {
+           comp_storage: starknet::storage::StorageBase{ address: selector!("comp_storage") },
+        }
     }
-    
+}
+pub struct ContractState {
+        pub comp_storage: super::comp::ComponentState<ContractState>,
+}
+
+impl ContractStateDrop of Drop<ContractState> {}
+ 
+impl ContractStateDeref of core::ops::SnapshotDeref<ContractState> {
+    type Target = ContractStorageBase;
+    fn snapshot_deref(self: @ContractState) -> ContractStorageBase {
+        self.storage_base()
+    }
+}
+impl ContractStateDerefMut of core::ops::DerefMut<ContractState> {
+    type Target = ContractStorageBaseMut;
+    fn deref_mut(ref self: ContractState) -> ContractStorageBaseMut {
+        self.storage_base_mut()
+    }
+}
+pub fn unsafe_new_contract_state() -> ContractState {
+    ContractState {
+            comp_storage: super::comp::unsafe_new_component_state::<ContractState>(),
+    }
+}
+#[cfg(target: 'test')]
+#[inline(always)]
+pub fn contract_state_for_testing() -> ContractState {
+    unsafe_new_contract_state()
+}
+
 use starknet::storage::{
-    StorageMapMemberAddressTrait, StorageMemberAddressTrait,
-    StorageMapMemberAccessTrait, StorageMemberAccessTrait
+    StorageMapReadAccessTrait, StorageMapWriteAccessTrait, 
+    StorableStoragePointerReadAccess, StorableStoragePointerWriteAccess
 };
+// TODO(Gil): This generates duplicate diagnostics because of the plugin system, squash the duplicates into one.
+#[deprecated(
+    feature: "deprecated_legacy_map",
+    note: "Use `starknet::storage::Map` instead."
+)]
+use starknet::storage::Map as LegacyMap;
 #[cfg(target: 'test')]
 pub const TEST_CLASS_HASH: felt252 = 0x1086dfc31bbcf268e659eae270c18772df580a79d61a03d56056059861c874a;
 
@@ -923,7 +1110,7 @@ impl ContractStateI2I of
         unsafe_new_contract_state()
     }
 }
-#[implicit_precedence(Pedersen, RangeCheck, Bitwise, EcOp, Poseidon, SegmentArena, GasBuiltin, System)]
+#[implicit_precedence(Pedersen, RangeCheck, Bitwise, core::ec::EcOp, Poseidon, SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, GasBuiltin, System)]
 fn __wrapper__foo(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
@@ -970,7 +1157,7 @@ pub mod __constructor {
 
 impl HasComponentImpl_comp of super::comp::HasComponent<ContractState> {
     fn get_component(self: @ContractState) -> @super::comp::ComponentState<ContractState> {
-        self.comp_storage
+                 @super::comp::unsafe_new_component_state::<ContractState>()
     }
     fn get_component_mut(ref self: ContractState) -> super::comp::ComponentState<ContractState> {
         super::comp::unsafe_new_component_state::<ContractState>()
@@ -989,11 +1176,17 @@ impl HasComponentImpl_comp of super::comp::HasComponent<ContractState> {
 }
 
 
+lib.cairo:47:1
+
+^
 impls:
 
 impl EventDrop of core::traits::Drop::<Event>;
 
 
+lib.cairo:49:20
+    #[derive(Drop, starknet::Event)]
+                   ^*************^
 starknet_derive:
 
 impl EventIsEvent of starknet::Event<Event> {
@@ -1027,6 +1220,25 @@ impl EventCompEventIntoEvent of Into<super::comp::Event, Event> {
         Event::CompEvent(self)
     }
 }
+
+
+
+lib.cairo:38:1
+#[starknet::contract]
+^*******************^
+impls:
+
+impl ContractStorageBaseDrop of core::traits::Drop::<ContractStorageBase>;
+impl ContractStorageBaseCopy of core::traits::Copy::<ContractStorageBase>;
+
+
+lib.cairo:38:1
+#[starknet::contract]
+^*******************^
+impls:
+
+impl ContractStorageBaseMutDrop of core::traits::Drop::<ContractStorageBaseMut>;
+impl ContractStorageBaseMutCopy of core::traits::Copy::<ContractStorageBaseMut>;
 
 //! > expected_diagnostics
 warning: Plugin diagnostic: Failed to generate ABI: Duplicate entry point: 'foo'. This is not currently supported.

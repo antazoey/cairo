@@ -1,6 +1,7 @@
 use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::ids::LanguageElementId;
 use cairo_lang_proc_macros::SemanticObject;
+use cairo_lang_utils::LookupIntern;
 use itertools::Itertools;
 
 use super::canonic::{CanonicalImpl, CanonicalMapping, CanonicalTrait, MapperError, ResultNoErrEx};
@@ -33,9 +34,7 @@ pub enum Ambiguity {
         #[dont_rewrite]
         var: InferenceVar,
     },
-    WillNotInfer {
-        concrete_trait_id: ConcreteTraitId,
-    },
+    WillNotInfer(ConcreteTraitId),
     NegativeImplWithUnresolvedGenericArgs {
         impl_id: ImplId,
         ty: TypeId,
@@ -55,7 +54,7 @@ impl Ambiguity {
             Ambiguity::FreeVariable { impl_id, var: _ } => {
                 format!("Candidate impl {:?} has an unused generic parameter.", impl_id.debug(db),)
             }
-            Ambiguity::WillNotInfer { concrete_trait_id } => {
+            Ambiguity::WillNotInfer(concrete_trait_id) => {
                 format!(
                     "Cannot infer trait {:?}. First generic argument must be known.",
                     concrete_trait_id.debug(db)
@@ -63,7 +62,7 @@ impl Ambiguity {
             }
             Ambiguity::NegativeImplWithUnresolvedGenericArgs { impl_id, ty } => format!(
                 "Cannot infer negative impl in `{}` as it contains the unresolved type `{}`",
-                { impl_id }.format(db),
+                impl_id.format(db),
                 ty.format(db)
             ),
         }
@@ -88,7 +87,7 @@ pub fn canonic_trait_solutions_cycle(
     _canonical_trait: &CanonicalTrait,
     _lookup_context: &ImplLookupContext,
 ) -> Result<SolutionSet<CanonicalImpl>, InferenceError> {
-    Err(InferenceError::Cycle { var: InferenceVar::Impl(LocalImplVarId(0)) })
+    Err(InferenceError::Cycle(InferenceVar::Impl(LocalImplVarId(0))))
 }
 
 /// Adds the defining module of the trait and the generic arguments to the lookup context.
@@ -99,10 +98,10 @@ pub fn enrich_lookup_context(
 ) {
     lookup_context.insert_module(concrete_trait_id.trait_id(db).module_file_id(db.upcast()).0);
     let generic_args = concrete_trait_id.generic_args(db);
-    // Add the defining module of the generic params to the lookup.
+    // Add the defining module of the generic args to the lookup.
     for generic_arg in &generic_args {
         if let GenericArgumentId::Type(ty) = generic_arg {
-            match db.lookup_intern_type(*ty) {
+            match ty.lookup_intern(db) {
                 TypeLongId::Concrete(concrete) => {
                     lookup_context
                         .insert_module(concrete.generic_type(db).module_file_id(db.upcast()).0);
@@ -113,6 +112,9 @@ pub fn enrich_lookup_context(
                     {
                         lookup_context.insert_module(module_file_id.0);
                     }
+                }
+                TypeLongId::ImplType(impl_type_id) => {
+                    lookup_context.insert_impl(impl_type_id.impl_id());
                 }
                 _ => (),
             }
@@ -196,7 +198,7 @@ impl CandidateSolver {
         let (concrete_trait_id, canonical_embedding) = canonical_trait.embed(&mut inference);
         // Add the defining module of the candidate to the lookup.
         let mut lookup_context = lookup_context.clone();
-        lookup_context.insert_module(candidate.module_id(db.upcast()));
+        lookup_context.insert_lookup_scope(candidate.lookup_scope(db.upcast()));
         // Instantiate the candidate in the inference table.
         let candidate_impl =
             inference.infer_impl(candidate, concrete_trait_id, &lookup_context, None)?;

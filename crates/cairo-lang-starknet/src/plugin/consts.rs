@@ -21,6 +21,11 @@ pub const DEPRECATED_ABI_ATTR: &str = "abi";
 pub const EVENT_ATTR: &str = "event";
 pub const EVENT_TRAIT: &str = "starknet::Event";
 pub const STORE_TRAIT: &str = "starknet::Store";
+pub const DERIVE_STORAGE_TRAIT: &str = "starknet::storage_access::DeriveStorage";
+pub const STORAGE_AS_POINTER_TRAIT: &str = "starknet::storage::StorageAsPointer";
+pub const STORAGE_AS_PATH_TRAIT: &str = "starknet::storage::StorageAsPath";
+pub const STORAGE_NODE_ATTR: &str = "starknet::storage_node";
+pub const STORAGE_SUB_POINTERS_ATTR: &str = "starknet::sub_pointers";
 pub const INTERFACE_ATTR: &str = "starknet::interface";
 pub(super) const DEPRECATED_CONTRACT_ATTR: &str = "contract";
 pub const CONTRACT_ATTR: &str = "starknet::contract";
@@ -61,9 +66,12 @@ pub(super) const IMPLICIT_PRECEDENCE: &[&str] = &[
     "Pedersen",
     "RangeCheck",
     "Bitwise",
-    "EcOp",
+    "core::ec::EcOp",
     "Poseidon",
     "SegmentArena",
+    "core::circuit::RangeCheck96",
+    "core::circuit::AddMod",
+    "core::circuit::MulMod",
     "GasBuiltin",
     "System",
 ];

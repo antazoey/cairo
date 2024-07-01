@@ -61,6 +61,9 @@ mod empty_contract {
     impl WorkingUsage = super::OutsideImpl<ContractState>;
 }
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 OutsideTraitDispatcherTrait:
 
 trait OutsideTraitDispatcherTrait<T> {
@@ -241,6 +244,9 @@ impl OutsideTraitSafeDispatcherImpl of OutsideTraitSafeDispatcherTrait<OutsideTr
 }
 
 
+lib.cairo:7:1
+#[starknet::embeddable]
+^*********************^
 embeddable:
 
 trait UnsafeNewContractStateTraitForOutsideImpl<
@@ -249,7 +255,7 @@ trait UnsafeNewContractStateTraitForOutsideImpl<
     fn unsafe_new_contract_state() -> TContractState;
 }
 
-#[implicit_precedence(Pedersen, RangeCheck, Bitwise, EcOp, Poseidon, SegmentArena, GasBuiltin, System)]
+#[implicit_precedence(Pedersen, RangeCheck, Bitwise, core::ec::EcOp, Poseidon, SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, GasBuiltin, System)]
 fn __wrapper__OutsideImpl__ret_3<TContractState, impl UnsafeNewContractState: UnsafeNewContractStateTraitForOutsideImpl<TContractState>, impl TContractStateDrop: Drop<TContractState>>(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
@@ -268,7 +274,7 @@ fn __wrapper__OutsideImpl__ret_3<TContractState, impl UnsafeNewContractState: Un
     core::array::ArrayTrait::span(@arr)
 }
 
-#[implicit_precedence(Pedersen, RangeCheck, Bitwise, EcOp, Poseidon, SegmentArena, GasBuiltin, System)]
+#[implicit_precedence(Pedersen, RangeCheck, Bitwise, core::ec::EcOp, Poseidon, SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, GasBuiltin, System)]
 fn __wrapper__OutsideImpl__ret_identity<TContractState, impl UnsafeNewContractState: UnsafeNewContractStateTraitForOutsideImpl<TContractState>, impl TContractStateDrop: Drop<TContractState>>(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
@@ -308,6 +314,9 @@ mod __constructor_OutsideImpl {
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitDispatcherCopy of core::traits::Copy::<OutsideTraitDispatcher>;
@@ -324,6 +333,9 @@ impl OutsideTraitDispatcherSerde of core::serde::Serde::<OutsideTraitDispatcher>
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitDispatcher of starknet::Store::<OutsideTraitDispatcher> {
@@ -357,8 +369,13 @@ impl StoreOutsideTraitDispatcher of starknet::Store::<OutsideTraitDispatcher> {
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitDispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitLibraryDispatcherCopy of core::traits::Copy::<OutsideTraitLibraryDispatcher>;
@@ -375,6 +392,9 @@ impl OutsideTraitLibraryDispatcherSerde of core::serde::Serde::<OutsideTraitLibr
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitLibraryDispatcher of starknet::Store::<OutsideTraitLibraryDispatcher> {
@@ -408,8 +428,13 @@ impl StoreOutsideTraitLibraryDispatcher of starknet::Store::<OutsideTraitLibrary
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitLibraryDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitLibraryDispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitSafeLibraryDispatcherCopy of core::traits::Copy::<OutsideTraitSafeLibraryDispatcher>;
@@ -426,6 +451,9 @@ impl OutsideTraitSafeLibraryDispatcherSerde of core::serde::Serde::<OutsideTrait
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitSafeLibraryDispatcher of starknet::Store::<OutsideTraitSafeLibraryDispatcher> {
@@ -459,8 +487,13 @@ impl StoreOutsideTraitSafeLibraryDispatcher of starknet::Store::<OutsideTraitSaf
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitSafeLibraryDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitSafeLibraryDispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitSafeDispatcherCopy of core::traits::Copy::<OutsideTraitSafeDispatcher>;
@@ -477,6 +510,9 @@ impl OutsideTraitSafeDispatcherSerde of core::serde::Serde::<OutsideTraitSafeDis
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitSafeDispatcher of starknet::Store::<OutsideTraitSafeDispatcher> {
@@ -510,8 +546,13 @@ impl StoreOutsideTraitSafeDispatcher of starknet::Store::<OutsideTraitSafeDispat
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitSafeDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitSafeDispatcher> {}
 
 
+lib.cairo:17:1
+#[starknet::contract]
+^*******************^
 contract:
 
 #[event]
@@ -519,63 +560,65 @@ contract:
 pub enum Event {}
 
 
-    pub struct ContractState {
-        pub value: __member_module_value::ContractMemberState,
-    }
-    impl ContractStateDrop of Drop<ContractState> {}
-    #[inline(always)]
-    pub fn unsafe_new_contract_state() -> ContractState {
-        ContractState {
-            value: __member_module_value::ContractMemberState {},
+#[derive(Drop, Copy)]
+struct ContractStorageBase {
+    value: starknet::storage::StorageBase<felt252>,
+}
+#[derive(Drop, Copy)]
+struct ContractStorageBaseMut {
+    value: starknet::storage::StorageBase<starknet::storage::Mutable<felt252>>,
+}
+impl StorageBaseImpl of starknet::storage::StorageBaseTrait<ContractState> {
+    type BaseType = ContractStorageBase;
+    type BaseMutType = ContractStorageBaseMut;
+    fn storage_base(self: @ContractState) -> ContractStorageBase {
+        ContractStorageBase {
+           value: starknet::storage::StorageBase{ address: selector!("value") },
         }
     }
-    #[cfg(test)]
-    #[inline(always)]
-    pub fn contract_state_for_testing() -> ContractState {
-        unsafe_new_contract_state()
-    }
-    
-    pub use __member_module_value::InternalContractMemberStateTrait as valueContractMemberStateTrait;
-    pub mod __member_module_value {
-        #[derive(Copy, Drop)]
-        pub struct ContractMemberState {}
-        pub trait InternalContractMemberStateTrait {
-            fn address(self: @ContractMemberState) -> starknet::storage_access::StorageBaseAddress;
-            fn read(self: @ContractMemberState) -> felt252;
-            fn write(ref self: ContractMemberState, value: felt252);
+    fn storage_base_mut(ref self: ContractState) -> ContractStorageBaseMut {
+        ContractStorageBaseMut {
+           value: starknet::storage::StorageBase{ address: selector!("value") },
         }
+    }
+}
+pub struct ContractState {
+}
 
-        impl InternalContractMemberStateImpl of InternalContractMemberStateTrait {
-            fn address(self: @ContractMemberState) -> starknet::storage_access::StorageBaseAddress {
-                starknet::storage_access::storage_base_address_const::<0x1afeeaff0ed5cee7d05a21078399c2f56226b0cd5657062500cef4c4e736f85>()
-            }
-            fn read(self: @ContractMemberState) -> felt252 {
-                // Only address_domain 0 is currently supported.
-                let address_domain = 0_u32;
-                starknet::SyscallResultTrait::unwrap_syscall(
-                    starknet::Store::<felt252>::read(
-                        address_domain,
-                        InternalContractMemberStateImpl::address(self),
-                    )
-                )
-            }
-            fn write(ref self: ContractMemberState, value: felt252) {
-                // Only address_domain 0 is currently supported.
-                let address_domain = 0_u32;
-                starknet::SyscallResultTrait::unwrap_syscall(
-                    starknet::Store::<felt252>::write(
-                        address_domain,
-                        InternalContractMemberStateImpl::address(@self),
-                        value,
-                    )
-                )
-            }
-        }
+impl ContractStateDrop of Drop<ContractState> {}
+ 
+impl ContractStateDeref of core::ops::SnapshotDeref<ContractState> {
+    type Target = ContractStorageBase;
+    fn snapshot_deref(self: @ContractState) -> ContractStorageBase {
+        self.storage_base()
     }
+}
+impl ContractStateDerefMut of core::ops::DerefMut<ContractState> {
+    type Target = ContractStorageBaseMut;
+    fn deref_mut(ref self: ContractState) -> ContractStorageBaseMut {
+        self.storage_base_mut()
+    }
+}
+pub fn unsafe_new_contract_state() -> ContractState {
+    ContractState {
+    }
+}
+#[cfg(target: 'test')]
+#[inline(always)]
+pub fn contract_state_for_testing() -> ContractState {
+    unsafe_new_contract_state()
+}
+
 use starknet::storage::{
-    StorageMapMemberAddressTrait, StorageMemberAddressTrait,
-    StorageMapMemberAccessTrait, StorageMemberAccessTrait
+    StorageMapReadAccessTrait, StorageMapWriteAccessTrait, 
+    StorableStoragePointerReadAccess, StorableStoragePointerWriteAccess
 };
+// TODO(Gil): This generates duplicate diagnostics because of the plugin system, squash the duplicates into one.
+#[deprecated(
+    feature: "deprecated_legacy_map",
+    note: "Use `starknet::storage::Map` instead."
+)]
+use starknet::storage::Map as LegacyMap;
 #[cfg(target: 'test')]
 pub const TEST_CLASS_HASH: felt252 = 0x24989c51cc02d16815c925171e8167063fde5b6487bb15a58d126a7bc4f3591;
 
@@ -613,11 +656,17 @@ pub mod __constructor {
 
 
 
+lib.cairo:17:1
+#[starknet::contract]
+^*******************^
 impls:
 
 impl EventDrop of core::traits::Drop::<Event>;
 
 
+lib.cairo:17:1
+#[starknet::contract]
+^*******************^
 starknet_derive:
 
 impl EventIsEvent of starknet::Event<Event> {
@@ -634,6 +683,25 @@ impl EventIsEvent of starknet::Event<Event> {
         Option::None
     }
 }
+
+
+
+lib.cairo:17:1
+#[starknet::contract]
+^*******************^
+impls:
+
+impl ContractStorageBaseDrop of core::traits::Drop::<ContractStorageBase>;
+impl ContractStorageBaseCopy of core::traits::Copy::<ContractStorageBase>;
+
+
+lib.cairo:17:1
+#[starknet::contract]
+^*******************^
+impls:
+
+impl ContractStorageBaseMutDrop of core::traits::Drop::<ContractStorageBaseMut>;
+impl ContractStorageBaseMutCopy of core::traits::Copy::<ContractStorageBaseMut>;
 
 //! > expected_diagnostics
 
@@ -728,6 +796,9 @@ mod empty_contract {
     impl Usage2 = super::OutsideImplWithPanicDestruct<ContractState>;
 }
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 OutsideTraitWithDestructDispatcherTrait:
 
 trait OutsideTraitWithDestructDispatcherTrait<T> {
@@ -837,6 +908,9 @@ impl OutsideTraitWithDestructSafeDispatcherImpl of OutsideTraitWithDestructSafeD
 }
 
 
+lib.cairo:6:1
+#[starknet::embeddable]
+^*********************^
 embeddable:
 
 trait UnsafeNewContractStateTraitForOutsideImplWithDestruct<
@@ -845,7 +919,7 @@ trait UnsafeNewContractStateTraitForOutsideImplWithDestruct<
     fn unsafe_new_contract_state() -> TContractState;
 }
 
-#[implicit_precedence(Pedersen, RangeCheck, Bitwise, EcOp, Poseidon, SegmentArena, GasBuiltin, System)]
+#[implicit_precedence(Pedersen, RangeCheck, Bitwise, core::ec::EcOp, Poseidon, SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, GasBuiltin, System)]
 fn __wrapper__OutsideImplWithDestruct__ret_3<TContractState, impl DisallowedDestruct: Destruct<TContractState>,impl UnsafeNewContractState: UnsafeNewContractStateTraitForOutsideImplWithDestruct<TContractState>, impl TContractStateDrop: Drop<TContractState>>(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
@@ -877,6 +951,9 @@ mod __constructor_OutsideImplWithDestruct {
 }
 
 
+lib.cairo:15:1
+#[starknet::interface]
+^********************^
 OutsideTraitWithPanicDestructDispatcherTrait:
 
 trait OutsideTraitWithPanicDestructDispatcherTrait<T> {
@@ -986,6 +1063,9 @@ impl OutsideTraitWithPanicDestructSafeDispatcherImpl of OutsideTraitWithPanicDes
 }
 
 
+lib.cairo:20:1
+#[starknet::embeddable]
+^*********************^
 embeddable:
 
 trait UnsafeNewContractStateTraitForOutsideImplWithPanicDestruct<
@@ -994,7 +1074,7 @@ trait UnsafeNewContractStateTraitForOutsideImplWithPanicDestruct<
     fn unsafe_new_contract_state() -> TContractState;
 }
 
-#[implicit_precedence(Pedersen, RangeCheck, Bitwise, EcOp, Poseidon, SegmentArena, GasBuiltin, System)]
+#[implicit_precedence(Pedersen, RangeCheck, Bitwise, core::ec::EcOp, Poseidon, SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, GasBuiltin, System)]
 fn __wrapper__OutsideImplWithPanicDestruct__ret_5<TContractState, impl DisallowedPanicDestruct: PanicDestruct<TContractState>, impl UnsafeNewContractState: UnsafeNewContractStateTraitForOutsideImplWithPanicDestruct<TContractState>, impl TContractStateDrop: Drop<TContractState>>(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
@@ -1026,6 +1106,9 @@ mod __constructor_OutsideImplWithPanicDestruct {
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithDestructDispatcherCopy of core::traits::Copy::<OutsideTraitWithDestructDispatcher>;
@@ -1042,6 +1125,9 @@ impl OutsideTraitWithDestructDispatcherSerde of core::serde::Serde::<OutsideTrai
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithDestructDispatcher of starknet::Store::<OutsideTraitWithDestructDispatcher> {
@@ -1075,8 +1161,13 @@ impl StoreOutsideTraitWithDestructDispatcher of starknet::Store::<OutsideTraitWi
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithDestructDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithDestructDispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithDestructLibraryDispatcherCopy of core::traits::Copy::<OutsideTraitWithDestructLibraryDispatcher>;
@@ -1093,6 +1184,9 @@ impl OutsideTraitWithDestructLibraryDispatcherSerde of core::serde::Serde::<Outs
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithDestructLibraryDispatcher of starknet::Store::<OutsideTraitWithDestructLibraryDispatcher> {
@@ -1126,8 +1220,13 @@ impl StoreOutsideTraitWithDestructLibraryDispatcher of starknet::Store::<Outside
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithDestructLibraryDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithDestructLibraryDispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithDestructSafeLibraryDispatcherCopy of core::traits::Copy::<OutsideTraitWithDestructSafeLibraryDispatcher>;
@@ -1144,6 +1243,9 @@ impl OutsideTraitWithDestructSafeLibraryDispatcherSerde of core::serde::Serde::<
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithDestructSafeLibraryDispatcher of starknet::Store::<OutsideTraitWithDestructSafeLibraryDispatcher> {
@@ -1177,8 +1279,13 @@ impl StoreOutsideTraitWithDestructSafeLibraryDispatcher of starknet::Store::<Out
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithDestructSafeLibraryDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithDestructSafeLibraryDispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithDestructSafeDispatcherCopy of core::traits::Copy::<OutsideTraitWithDestructSafeDispatcher>;
@@ -1195,6 +1302,9 @@ impl OutsideTraitWithDestructSafeDispatcherSerde of core::serde::Serde::<Outside
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithDestructSafeDispatcher of starknet::Store::<OutsideTraitWithDestructSafeDispatcher> {
@@ -1228,8 +1338,13 @@ impl StoreOutsideTraitWithDestructSafeDispatcher of starknet::Store::<OutsideTra
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithDestructSafeDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithDestructSafeDispatcher> {}
 
 
+lib.cairo:15:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithPanicDestructDispatcherCopy of core::traits::Copy::<OutsideTraitWithPanicDestructDispatcher>;
@@ -1246,6 +1361,9 @@ impl OutsideTraitWithPanicDestructDispatcherSerde of core::serde::Serde::<Outsid
 }
 
 
+lib.cairo:15:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithPanicDestructDispatcher of starknet::Store::<OutsideTraitWithPanicDestructDispatcher> {
@@ -1279,8 +1397,13 @@ impl StoreOutsideTraitWithPanicDestructDispatcher of starknet::Store::<OutsideTr
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithPanicDestructDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithPanicDestructDispatcher> {}
 
 
+lib.cairo:15:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithPanicDestructLibraryDispatcherCopy of core::traits::Copy::<OutsideTraitWithPanicDestructLibraryDispatcher>;
@@ -1297,6 +1420,9 @@ impl OutsideTraitWithPanicDestructLibraryDispatcherSerde of core::serde::Serde::
 }
 
 
+lib.cairo:15:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithPanicDestructLibraryDispatcher of starknet::Store::<OutsideTraitWithPanicDestructLibraryDispatcher> {
@@ -1330,8 +1456,13 @@ impl StoreOutsideTraitWithPanicDestructLibraryDispatcher of starknet::Store::<Ou
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithPanicDestructLibraryDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithPanicDestructLibraryDispatcher> {}
 
 
+lib.cairo:15:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithPanicDestructSafeLibraryDispatcherCopy of core::traits::Copy::<OutsideTraitWithPanicDestructSafeLibraryDispatcher>;
@@ -1348,6 +1479,9 @@ impl OutsideTraitWithPanicDestructSafeLibraryDispatcherSerde of core::serde::Ser
 }
 
 
+lib.cairo:15:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithPanicDestructSafeLibraryDispatcher of starknet::Store::<OutsideTraitWithPanicDestructSafeLibraryDispatcher> {
@@ -1381,8 +1515,13 @@ impl StoreOutsideTraitWithPanicDestructSafeLibraryDispatcher of starknet::Store:
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithPanicDestructSafeLibraryDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithPanicDestructSafeLibraryDispatcher> {}
 
 
+lib.cairo:15:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithPanicDestructSafeDispatcherCopy of core::traits::Copy::<OutsideTraitWithPanicDestructSafeDispatcher>;
@@ -1399,6 +1538,9 @@ impl OutsideTraitWithPanicDestructSafeDispatcherSerde of core::serde::Serde::<Ou
 }
 
 
+lib.cairo:15:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithPanicDestructSafeDispatcher of starknet::Store::<OutsideTraitWithPanicDestructSafeDispatcher> {
@@ -1432,8 +1574,13 @@ impl StoreOutsideTraitWithPanicDestructSafeDispatcher of starknet::Store::<Outsi
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithPanicDestructSafeDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithPanicDestructSafeDispatcher> {}
 
 
+lib.cairo:29:1
+#[starknet::contract]
+^*******************^
 contract:
 
 #[event]
@@ -1441,24 +1588,61 @@ contract:
 pub enum Event {}
 
 
-    pub struct ContractState {
-    }
-    impl ContractStateDrop of Drop<ContractState> {}
-    #[inline(always)]
-    pub fn unsafe_new_contract_state() -> ContractState {
-        ContractState {
+#[derive(Drop, Copy)]
+struct ContractStorageBase {
+}
+#[derive(Drop, Copy)]
+struct ContractStorageBaseMut {
+}
+impl StorageBaseImpl of starknet::storage::StorageBaseTrait<ContractState> {
+    type BaseType = ContractStorageBase;
+    type BaseMutType = ContractStorageBaseMut;
+    fn storage_base(self: @ContractState) -> ContractStorageBase {
+        ContractStorageBase {
         }
     }
-    #[cfg(test)]
-    #[inline(always)]
-    pub fn contract_state_for_testing() -> ContractState {
-        unsafe_new_contract_state()
+    fn storage_base_mut(ref self: ContractState) -> ContractStorageBaseMut {
+        ContractStorageBaseMut {
+        }
     }
-    
+}
+pub struct ContractState {
+}
+
+impl ContractStateDrop of Drop<ContractState> {}
+ 
+impl ContractStateDeref of core::ops::SnapshotDeref<ContractState> {
+    type Target = ContractStorageBase;
+    fn snapshot_deref(self: @ContractState) -> ContractStorageBase {
+        self.storage_base()
+    }
+}
+impl ContractStateDerefMut of core::ops::DerefMut<ContractState> {
+    type Target = ContractStorageBaseMut;
+    fn deref_mut(ref self: ContractState) -> ContractStorageBaseMut {
+        self.storage_base_mut()
+    }
+}
+pub fn unsafe_new_contract_state() -> ContractState {
+    ContractState {
+    }
+}
+#[cfg(target: 'test')]
+#[inline(always)]
+pub fn contract_state_for_testing() -> ContractState {
+    unsafe_new_contract_state()
+}
+
 use starknet::storage::{
-    StorageMapMemberAddressTrait, StorageMemberAddressTrait,
-    StorageMapMemberAccessTrait, StorageMemberAccessTrait
+    StorageMapReadAccessTrait, StorageMapWriteAccessTrait, 
+    StorableStoragePointerReadAccess, StorableStoragePointerWriteAccess
 };
+// TODO(Gil): This generates duplicate diagnostics because of the plugin system, squash the duplicates into one.
+#[deprecated(
+    feature: "deprecated_legacy_map",
+    note: "Use `starknet::storage::Map` instead."
+)]
+use starknet::storage::Map as LegacyMap;
 #[cfg(target: 'test')]
 pub const TEST_CLASS_HASH: felt252 = 0x2f3505035216cb9786b44e88c45f03e355e52c775f1b6ee6be27556e20667b;
 
@@ -1502,11 +1686,17 @@ pub mod __constructor {
 
 
 
+lib.cairo:29:1
+#[starknet::contract]
+^*******************^
 impls:
 
 impl EventDrop of core::traits::Drop::<Event>;
 
 
+lib.cairo:29:1
+#[starknet::contract]
+^*******************^
 starknet_derive:
 
 impl EventIsEvent of starknet::Event<Event> {
@@ -1523,6 +1713,25 @@ impl EventIsEvent of starknet::Event<Event> {
         Option::None
     }
 }
+
+
+
+lib.cairo:29:1
+#[starknet::contract]
+^*******************^
+impls:
+
+impl ContractStorageBaseDrop of core::traits::Drop::<ContractStorageBase>;
+impl ContractStorageBaseCopy of core::traits::Copy::<ContractStorageBase>;
+
+
+lib.cairo:29:1
+#[starknet::contract]
+^*******************^
+impls:
+
+impl ContractStorageBaseMutDrop of core::traits::Drop::<ContractStorageBaseMut>;
+impl ContractStorageBaseMutCopy of core::traits::Copy::<ContractStorageBaseMut>;
 
 //! > expected_diagnostics
 error: Plugin diagnostic: `embeddable` impls can't have impl generic parameters of `Destruct<TContractState>` or `PanicDestruct<TContractState>`.
@@ -1592,6 +1801,9 @@ mod empty_contract {
     impl Usage1 = super::OutsideImplWithDrop<ContractState>;
 }
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 OutsideTraitWithDropDispatcherTrait:
 
 trait OutsideTraitWithDropDispatcherTrait<T> {
@@ -1701,6 +1913,9 @@ impl OutsideTraitWithDropSafeDispatcherImpl of OutsideTraitWithDropSafeDispatche
 }
 
 
+lib.cairo:6:1
+#[starknet::embeddable]
+^*********************^
 embeddable:
 
 trait UnsafeNewContractStateTraitForOutsideImplWithDrop<
@@ -1709,7 +1924,7 @@ trait UnsafeNewContractStateTraitForOutsideImplWithDrop<
     fn unsafe_new_contract_state() -> TContractState;
 }
 
-#[implicit_precedence(Pedersen, RangeCheck, Bitwise, EcOp, Poseidon, SegmentArena, GasBuiltin, System)]
+#[implicit_precedence(Pedersen, RangeCheck, Bitwise, core::ec::EcOp, Poseidon, SegmentArena, core::circuit::RangeCheck96, core::circuit::AddMod, core::circuit::MulMod, GasBuiltin, System)]
 fn __wrapper__OutsideImplWithDrop__ret_8<TContractState, +Drop<TContractState>,impl UnsafeNewContractState: UnsafeNewContractStateTraitForOutsideImplWithDrop<TContractState>>(mut data: Span::<felt252>) -> Span::<felt252> {
     core::internal::require_implicit::<System>();
     core::internal::revoke_ap_tracking();
@@ -1741,6 +1956,9 @@ mod __constructor_OutsideImplWithDrop {
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithDropDispatcherCopy of core::traits::Copy::<OutsideTraitWithDropDispatcher>;
@@ -1757,6 +1975,9 @@ impl OutsideTraitWithDropDispatcherSerde of core::serde::Serde::<OutsideTraitWit
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithDropDispatcher of starknet::Store::<OutsideTraitWithDropDispatcher> {
@@ -1790,8 +2011,13 @@ impl StoreOutsideTraitWithDropDispatcher of starknet::Store::<OutsideTraitWithDr
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithDropDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithDropDispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithDropLibraryDispatcherCopy of core::traits::Copy::<OutsideTraitWithDropLibraryDispatcher>;
@@ -1808,6 +2034,9 @@ impl OutsideTraitWithDropLibraryDispatcherSerde of core::serde::Serde::<OutsideT
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithDropLibraryDispatcher of starknet::Store::<OutsideTraitWithDropLibraryDispatcher> {
@@ -1841,8 +2070,13 @@ impl StoreOutsideTraitWithDropLibraryDispatcher of starknet::Store::<OutsideTrai
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithDropLibraryDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithDropLibraryDispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithDropSafeLibraryDispatcherCopy of core::traits::Copy::<OutsideTraitWithDropSafeLibraryDispatcher>;
@@ -1859,6 +2093,9 @@ impl OutsideTraitWithDropSafeLibraryDispatcherSerde of core::serde::Serde::<Outs
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithDropSafeLibraryDispatcher of starknet::Store::<OutsideTraitWithDropSafeLibraryDispatcher> {
@@ -1892,8 +2129,13 @@ impl StoreOutsideTraitWithDropSafeLibraryDispatcher of starknet::Store::<Outside
         starknet::Store::<starknet::ClassHash>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithDropSafeLibraryDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithDropSafeLibraryDispatcher> {}
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 impls:
 
 impl OutsideTraitWithDropSafeDispatcherCopy of core::traits::Copy::<OutsideTraitWithDropSafeDispatcher>;
@@ -1910,6 +2152,9 @@ impl OutsideTraitWithDropSafeDispatcherSerde of core::serde::Serde::<OutsideTrai
 }
 
 
+lib.cairo:1:1
+#[starknet::interface]
+^********************^
 starknet_derive:
 
 impl StoreOutsideTraitWithDropSafeDispatcher of starknet::Store::<OutsideTraitWithDropSafeDispatcher> {
@@ -1943,8 +2188,13 @@ impl StoreOutsideTraitWithDropSafeDispatcher of starknet::Store::<OutsideTraitWi
         starknet::Store::<starknet::ContractAddress>::size()
     }
 }
+#[feature("derive-storage")]
+impl DeriveStorageOutsideTraitWithDropSafeDispatcher of starknet::storage_access::DeriveStorage::<OutsideTraitWithDropSafeDispatcher> {}
 
 
+lib.cairo:15:1
+#[starknet::contract]
+^*******************^
 contract:
 
 #[event]
@@ -1952,24 +2202,61 @@ contract:
 pub enum Event {}
 
 
-    pub struct ContractState {
-    }
-    impl ContractStateDrop of Drop<ContractState> {}
-    #[inline(always)]
-    pub fn unsafe_new_contract_state() -> ContractState {
-        ContractState {
+#[derive(Drop, Copy)]
+struct ContractStorageBase {
+}
+#[derive(Drop, Copy)]
+struct ContractStorageBaseMut {
+}
+impl StorageBaseImpl of starknet::storage::StorageBaseTrait<ContractState> {
+    type BaseType = ContractStorageBase;
+    type BaseMutType = ContractStorageBaseMut;
+    fn storage_base(self: @ContractState) -> ContractStorageBase {
+        ContractStorageBase {
         }
     }
-    #[cfg(test)]
-    #[inline(always)]
-    pub fn contract_state_for_testing() -> ContractState {
-        unsafe_new_contract_state()
+    fn storage_base_mut(ref self: ContractState) -> ContractStorageBaseMut {
+        ContractStorageBaseMut {
+        }
     }
-    
+}
+pub struct ContractState {
+}
+
+impl ContractStateDrop of Drop<ContractState> {}
+ 
+impl ContractStateDeref of core::ops::SnapshotDeref<ContractState> {
+    type Target = ContractStorageBase;
+    fn snapshot_deref(self: @ContractState) -> ContractStorageBase {
+        self.storage_base()
+    }
+}
+impl ContractStateDerefMut of core::ops::DerefMut<ContractState> {
+    type Target = ContractStorageBaseMut;
+    fn deref_mut(ref self: ContractState) -> ContractStorageBaseMut {
+        self.storage_base_mut()
+    }
+}
+pub fn unsafe_new_contract_state() -> ContractState {
+    ContractState {
+    }
+}
+#[cfg(target: 'test')]
+#[inline(always)]
+pub fn contract_state_for_testing() -> ContractState {
+    unsafe_new_contract_state()
+}
+
 use starknet::storage::{
-    StorageMapMemberAddressTrait, StorageMemberAddressTrait,
-    StorageMapMemberAccessTrait, StorageMemberAccessTrait
+    StorageMapReadAccessTrait, StorageMapWriteAccessTrait, 
+    StorableStoragePointerReadAccess, StorableStoragePointerWriteAccess
 };
+// TODO(Gil): This generates duplicate diagnostics because of the plugin system, squash the duplicates into one.
+#[deprecated(
+    feature: "deprecated_legacy_map",
+    note: "Use `starknet::storage::Map` instead."
+)]
+use starknet::storage::Map as LegacyMap;
 #[cfg(target: 'test')]
 pub const TEST_CLASS_HASH: felt252 = 0x7abed9c637e9d7ff4d836f1e5e23fa64efc1ba2169cc22aa5d822ad70fed47;
 
@@ -2007,11 +2294,17 @@ pub mod __constructor {
 
 
 
+lib.cairo:15:1
+#[starknet::contract]
+^*******************^
 impls:
 
 impl EventDrop of core::traits::Drop::<Event>;
 
 
+lib.cairo:15:1
+#[starknet::contract]
+^*******************^
 starknet_derive:
 
 impl EventIsEvent of starknet::Event<Event> {
@@ -2028,5 +2321,24 @@ impl EventIsEvent of starknet::Event<Event> {
         Option::None
     }
 }
+
+
+
+lib.cairo:15:1
+#[starknet::contract]
+^*******************^
+impls:
+
+impl ContractStorageBaseDrop of core::traits::Drop::<ContractStorageBase>;
+impl ContractStorageBaseCopy of core::traits::Copy::<ContractStorageBase>;
+
+
+lib.cairo:15:1
+#[starknet::contract]
+^*******************^
+impls:
+
+impl ContractStorageBaseMutDrop of core::traits::Drop::<ContractStorageBaseMut>;
+impl ContractStorageBaseMutCopy of core::traits::Copy::<ContractStorageBaseMut>;
 
 //! > expected_diagnostics
