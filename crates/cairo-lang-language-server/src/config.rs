@@ -15,7 +15,6 @@ use crate::server::schedule::Task;
 
 // TODO(mkaput): Write a macro that will auto-generate this struct and the `reload` logic.
 // TODO(mkaput): Write a test that checks that fields in this struct are sorted alphabetically.
-// TODO(mkaput): Write a tool that syncs `configuration` in VSCode extension's `package.json`.
 /// Runtime configuration for the language server.
 ///
 /// The properties stored in this struct **may** change during LS lifetime (through the
@@ -96,7 +95,7 @@ impl Config {
                 state.config.trace_macro_diagnostics =
                     response.pop_front().as_ref().and_then(Value::as_bool).unwrap_or_default();
                 state.config.enable_proc_macros =
-                    response.pop_front().as_ref().and_then(Value::as_bool).unwrap_or(true);
+                    response.pop_front().as_ref().and_then(Value::as_bool).unwrap_or(false);
 
                 debug!("reloaded configuration: {:#?}", state.config);
 
