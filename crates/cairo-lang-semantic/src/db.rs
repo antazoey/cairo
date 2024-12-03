@@ -35,7 +35,7 @@ use crate::items::trt::{
     ConcreteTraitGenericFunctionId, ConcreteTraitId, TraitItemConstantData, TraitItemImplData,
     TraitItemTypeData,
 };
-use crate::items::us::SemanticUseEx;
+use crate::items::us::{ImportedModules, SemanticUseEx};
 use crate::items::visibility::Visibility;
 use crate::plugin::AnalyzerPlugin;
 use crate::resolve::{ResolvedConcreteItem, ResolvedGenericItem, ResolverData};
@@ -194,6 +194,9 @@ pub trait SemanticGroup:
         &self,
         global_use_id: GlobalUseId,
     ) -> Diagnostics<SemanticDiagnostic>;
+    /// Private query to compute the imported modules of a module, using global uses.
+    #[salsa::invoke(items::us::priv_module_use_star_modules)]
+    fn priv_module_use_star_modules(&self, module_id: ModuleId) -> Arc<ImportedModules>;
 
     // Module.
     // ====
@@ -1489,6 +1492,10 @@ pub trait SemanticGroup:
     /// Private query to check if a type contains no variables.
     #[salsa::invoke(types::priv_type_is_var_free)]
     fn priv_type_is_var_free(&self, ty: types::TypeId) -> bool;
+
+    /// Private query for a shorter unique name for types.
+    #[salsa::invoke(types::priv_type_short_name)]
+    fn priv_type_short_name(&self, ty: types::TypeId) -> String;
 
     // Expression.
     // ===========
