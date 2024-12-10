@@ -1039,7 +1039,7 @@ impl<'db> Inference<'db> {
                     })
                     .map(|generic_param| {
                         rewriter
-                            .rewrite(*generic_param)
+                            .rewrite(generic_param.clone())
                             .and_then(|generic_param| generic_param.concrete_trait)
                     });
                 validate_no_solution_set(self, canonical_impl, lookup_context, concrete_traits)
@@ -1329,8 +1329,9 @@ impl SemanticRewriter<ImplLongId, NoError> for Inference<'_> {
     fn internal_rewrite(&mut self, value: &mut ImplLongId) -> Result<RewriteResult, NoError> {
         match value {
             ImplLongId::ImplVar(var) => {
+                let long_id = var.lookup_intern(self.db);
                 // Relax the candidates.
-                let impl_var_id = var.lookup_intern(self.db).id;
+                let impl_var_id = long_id.id;
                 if let Some(impl_id) = self.impl_assignment(impl_var_id) {
                     let mut long_impl_id = impl_id.lookup_intern(self.db);
                     if let RewriteResult::Modified = self.internal_rewrite(&mut long_impl_id)? {

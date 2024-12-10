@@ -72,7 +72,7 @@ error: Type not found.
     fn param_test(ref a: u128) -> bad_type nopanic;
                                   ^******^
 
-error: Not all trait items are implemented. Missing: 'param_test', 'no_ret_ty'.
+error[E0004]: Not all trait items are implemented. Missing: 'param_test', 'no_ret_ty'.
  --> lib.cairo:7:6
 impl MyImpl of MyTrait::<A>;
      ^****^
@@ -138,9 +138,9 @@ error: The signature of function `param_test` is incompatible with trait `MyTrai
                  ^******************************************^
 
 error: Unexpected return type. Expected: "core::integer::u128", found: "()".
- --> lib.cairo:26:63
+ --> lib.cairo:26:58
     fn param_test(a: felt252, b: felt252, c: felt252) -> u128 {
-                                                              ^
+                                                         ^**^
 
 error: Parameter of impl function MyImpl2::no_ret_ty is incompatible with MyTrait::no_ret_ty. It should not be a reference.
  --> lib.cairo:30:18
@@ -425,7 +425,7 @@ trait MyTrait {
 impl MyImpl of MyTrait;
 
 //! > expected_diagnostics
-error: Not all trait items are implemented. Missing: 'foo1', 'foo2'.
+error[E0004]: Not all trait items are implemented. Missing: 'foo1', 'foo2'.
  --> lib.cairo:5:6
 impl MyImpl of MyTrait;
      ^****^
@@ -456,7 +456,7 @@ impl MyImpl of MyTrait;
 // TODO(TomerStarkware): improve diagnostics for missing impls.
 
 //! > expected_diagnostics
-error: Not all trait items are implemented. Missing: 'foo1', 'foo2', 'X', 'C'.
+error[E0004]: Not all trait items are implemented. Missing: 'foo1', 'foo2', 'X', 'C'.
  --> lib.cairo:9:6
 impl MyImpl of MyTrait;
      ^****^
@@ -509,7 +509,7 @@ impl MyImpl of MyTrait {
 }
 
 //! > expected_diagnostics
-error: Not all trait items are implemented. Missing: 'foo1', 'foo3', 'Y', 'D'.
+error[E0004]: Not all trait items are implemented. Missing: 'foo1', 'foo3', 'Y', 'D'.
  --> lib.cairo:16:6
 impl MyImpl of MyTrait {
      ^****^
@@ -996,9 +996,9 @@ impl MyImpl of MyTrait {
 
 //! > expected_diagnostics
 error: Unexpected return type. Expected: "core::integer::u32", found: "core::integer::u16".
- --> lib.cairo:6:22
+ --> lib.cairo:6:18
     fn foo1() -> u32 {
-                     ^
+                 ^*^
 
 //! > ==========================================================================
 

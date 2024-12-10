@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use cairo_lang_utils::{LookupIntern, Upcast};
+use salsa::Durability;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use smol_str::{SmolStr, ToSmolStr};
@@ -150,6 +151,8 @@ pub struct DependencySettings {
 #[derive(Clone, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExperimentalFeaturesConfig {
     pub negative_impls: bool,
+    /// Allows using associated item constraints.
+    pub associated_item_constraints: bool,
     /// Allows using coupon types and coupon calls.
     ///
     /// Each function has a associated `Coupon` type, which represents paying the cost of the
@@ -237,6 +240,7 @@ pub fn init_dev_corelib(db: &mut (dyn FilesGroup + 'static), core_lib_dir: PathB
                 dependencies: Default::default(),
                 experimental_features: ExperimentalFeaturesConfig {
                     negative_impls: true,
+                    associated_item_constraints: true,
                     coupons: true,
                 },
             },
@@ -310,10 +314,16 @@ fn crate_config(db: &dyn FilesGroup, crt: CrateId) -> Option<CrateConfiguration>
 
 fn priv_raw_file_content(db: &dyn FilesGroup, file: FileId) -> Option<Arc<str>> {
     match file.lookup_intern(db) {
-        FileLongId::OnDisk(path) => match fs::read_to_string(path) {
-            Ok(content) => Some(content.into()),
-            Err(_) => None,
-        },
+        FileLongId::OnDisk(path) => {
+            // This does not result in performance cost due to OS caching and the fact that salsa
+            // will re-execute only this single query if the file content did not change.
+            db.salsa_runtime().report_synthetic_read(Durability::LOW);
+
+            match fs::read_to_string(path) {
+                Ok(content) => Some(content.into()),
+                Err(_) => None,
+            }
+        }
         FileLongId::Virtual(virt) => Some(virt.content),
         FileLongId::External(external_id) => Some(db.ext_as_virtual(external_id).content),
     }
