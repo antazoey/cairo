@@ -64,7 +64,11 @@ impl UseTree {
 
     /// Merge and organize the `use` paths in a hierarchical structure.
     /// Additionally returns whether the returned elements are a single leaf.
-    pub fn create_merged_use_items(self, allow_duplicate_uses: bool) -> (Vec<String>, bool) {
+    pub fn create_merged_use_items(
+        self,
+        allow_duplicate_uses: bool,
+        top_level: bool,
+    ) -> (Vec<String>, bool) {
         let mut leaf_paths: Vec<_> = self
             .leaves
             .into_iter()
@@ -80,7 +84,7 @@ impl UseTree {
         let mut nested_paths = vec![];
         for (segment, subtree) in self.children {
             let (subtree_merged_use_items, is_single_leaf) =
-                subtree.create_merged_use_items(allow_duplicate_uses);
+                subtree.create_merged_use_items(allow_duplicate_uses, false);
 
             let formatted_subtree_paths =
                 subtree_merged_use_items.into_iter().map(|child| format!("{segment}::{child}"));
@@ -101,6 +105,7 @@ impl UseTree {
             0 => {}
             1 if nested_paths.is_empty() => return (leaf_paths, true),
             1 => nested_paths.extend(leaf_paths),
+            _ if top_level => nested_paths.extend(leaf_paths),
             _ => nested_paths.push(format!("{{{}}}", leaf_paths.join(", "))),
         }
 
@@ -115,7 +120,7 @@ impl UseTree {
         decorations: String,
     ) -> SyntaxNode {
         let mut formatted_use_items = String::new();
-        for statement in self.create_merged_use_items(allow_duplicate_uses).0 {
+        for statement in self.create_merged_use_items(allow_duplicate_uses, true).0 {
             formatted_use_items.push_str(&format!("{decorations}use {statement};\n"));
         }
 
@@ -1037,24 +1042,7 @@ impl<'a> FormatterImpl<'a> {
                 OrderedHashMap::default();
 
             for node in section_nodes {
-                // Check if the node has any non-trivial trivia (i.e., comments).
-                let has_non_whitespace_trivia = !node.descendants(self.db).all(|descendant| {
-                    if descendant.kind(self.db) == SyntaxKind::Trivia {
-                        ast::Trivia::from_syntax_node(self.db, descendant)
-                            .elements(self.db)
-                            .into_iter()
-                            .all(|element| {
-                                matches!(
-                                    element,
-                                    ast::Trivium::Whitespace(_) | ast::Trivium::Newline(_)
-                                )
-                            })
-                    } else {
-                        true
-                    }
-                });
-
-                if has_non_whitespace_trivia {
+                if !self.has_only_whitespace_trivia(node) {
                     new_children.push(node.clone());
                     continue;
                 }
@@ -1097,8 +1085,28 @@ impl<'a> FormatterImpl<'a> {
         *children = new_children;
     }
 
+    /// Returns whether the node has only whitespace trivia.
+    fn has_only_whitespace_trivia(&self, node: &SyntaxNode) -> bool {
+        node.descendants(self.db).all(|descendant| {
+            if descendant.kind(self.db) == SyntaxKind::Trivia {
+                ast::Trivia::from_syntax_node(self.db, descendant)
+                    .elements(self.db)
+                    .into_iter()
+                    .all(|element| {
+                        matches!(element, ast::Trivium::Whitespace(_) | ast::Trivium::Newline(_))
+                    })
+            } else {
+                true
+            }
+        })
+    }
+
     /// Sorting function for `UsePathMulti` children.
     fn sort_inner_use_path(&self, children: &mut Vec<SyntaxNode>) {
+        // If any child has non-trivial trivia, do not sort.
+        if children.iter().any(|child| !self.has_only_whitespace_trivia(child)) {
+            return;
+        }
         // Split list into `use` path parts and TokenComma.
         let (mut sorted_elements, commas): (Vec<_>, Vec<_>) = std::mem::take(children)
             .into_iter()
