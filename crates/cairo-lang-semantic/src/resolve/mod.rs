@@ -18,7 +18,6 @@ use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, ast};
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use cairo_lang_utils::ordered_hash_set::OrderedHashSet;
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
-use cairo_lang_utils::unordered_hash_set::UnorderedHashSet;
 use cairo_lang_utils::{Intern, LookupIntern, extract_matches, require, try_extract_matches};
 pub use item::{ResolvedConcreteItem, ResolvedGenericItem};
 use itertools::Itertools;
@@ -47,12 +46,11 @@ use crate::items::generics::generic_params_to_args;
 use crate::items::imp::{
     ConcreteImplId, ConcreteImplLongId, ImplImplId, ImplLongId, ImplLookupContext,
 };
-use crate::items::module::{ModuleItemInfo, get_module_global_uses};
+use crate::items::module::ModuleItemInfo;
 use crate::items::trt::{
     ConcreteTraitConstantLongId, ConcreteTraitGenericFunctionLongId, ConcreteTraitId,
     ConcreteTraitImplLongId, ConcreteTraitLongId, ConcreteTraitTypeId,
 };
-use crate::items::visibility::peek_visible_in;
 use crate::items::{TraitOrImplContext, visibility};
 use crate::substitution::{GenericSubstitution, SemanticRewriter, SubstitutionRewriter};
 use crate::types::{ImplTypeId, are_coupons_enabled, resolve_type};
@@ -244,15 +242,6 @@ enum UseStarResult {
     PathNotFound,
     /// Item is not visible in the current module, considering only the `use *` imports.
     ItemNotVisible(ModuleItemId, Vec<ModuleId>),
-}
-
-/// The modules that are imported by a module, using global uses.
-struct ImportedModules {
-    /// The imported modules that have a path where each step is visible by the previous module.
-    accessible_modules: OrderedHashSet<(ModuleId, ModuleId)>,
-    // TODO(Tomer-StarkWare): consider changing from all_modules to inaccessible_modules
-    /// All the imported modules.
-    all_modules: OrderedHashSet<ModuleId>,
 }
 
 /// A trait for things that can be interpreted as a path of segments.
@@ -1139,41 +1128,45 @@ impl<'db> Resolver<'db> {
     ) -> UseStarResult {
         let mut item_info = None;
         let mut module_items_found: OrderedHashSet<ModuleItemId> = OrderedHashSet::default();
-        let imported_modules = self.module_use_star_modules(module_id);
-        let mut containing_modules = vec![];
-        let mut is_accessible = false;
-        for (star_module_id, item_module_id) in imported_modules.accessible_modules {
+        let imported_modules = self.db.priv_module_use_star_modules(module_id);
+        for (star_module_id, item_module_id) in &imported_modules.accessible {
             if let Some(inner_item_info) =
-                self.resolve_item_in_imported_module(item_module_id, identifier)
+                self.resolve_item_in_imported_module(*item_module_id, identifier)
             {
-                item_info = Some(inner_item_info.clone());
-                is_accessible |=
-                    self.is_item_visible(item_module_id, &inner_item_info, star_module_id)
-                        && self.is_item_feature_usable(&inner_item_info);
-                module_items_found.insert(inner_item_info.item_id);
-            }
-        }
-        for star_module_id in imported_modules.all_modules {
-            if let Some(inner_item_info) =
-                self.resolve_item_in_imported_module(star_module_id, identifier)
-            {
-                item_info = Some(inner_item_info.clone());
-                module_items_found.insert(inner_item_info.item_id);
-                containing_modules.push(star_module_id);
+                if self.is_item_visible(*item_module_id, &inner_item_info, *star_module_id)
+                    && self.is_item_feature_usable(&inner_item_info)
+                {
+                    item_info = Some(inner_item_info.clone());
+                    module_items_found.insert(inner_item_info.item_id);
+                }
             }
         }
         if module_items_found.len() > 1 {
             return UseStarResult::AmbiguousPath(module_items_found.iter().cloned().collect());
         }
         match item_info {
-            Some(item_info) => {
-                if is_accessible {
-                    UseStarResult::UniquePathFound(item_info)
+            Some(item_info) => UseStarResult::UniquePathFound(item_info),
+            None => {
+                let mut containing_modules = vec![];
+                for star_module_id in &imported_modules.all {
+                    if let Some(inner_item_info) =
+                        self.resolve_item_in_imported_module(*star_module_id, identifier)
+                    {
+                        item_info = Some(inner_item_info.clone());
+                        module_items_found.insert(inner_item_info.item_id);
+                        containing_modules.push(*star_module_id);
+                    }
+                }
+                if let Some(item_info) = item_info {
+                    if module_items_found.len() > 1 {
+                        UseStarResult::AmbiguousPath(module_items_found.iter().cloned().collect())
+                    } else {
+                        UseStarResult::ItemNotVisible(item_info.item_id, containing_modules)
+                    }
                 } else {
-                    UseStarResult::ItemNotVisible(item_info.item_id, containing_modules)
+                    UseStarResult::PathNotFound
                 }
             }
-            None => UseStarResult::PathNotFound,
         }
     }
 
@@ -1190,56 +1183,6 @@ impl<'db> Resolver<'db> {
             return Some(inner_item_info);
         }
         None
-    }
-
-    /// Returns the modules that are imported with `use *` in the current module.
-    fn module_use_star_modules(&self, module_id: ModuleId) -> ImportedModules {
-        let mut visited = UnorderedHashSet::<_>::default();
-        let mut stack = vec![(module_id, module_id)];
-        let mut accessible_modules = OrderedHashSet::default();
-        // Iterate over all modules that are imported through `use *`, and are accessible from the
-        // current module.
-        while let Some((user_module, containing_module)) = stack.pop() {
-            if !visited.insert((user_module, containing_module)) {
-                continue;
-            }
-            let Ok(glob_uses) = get_module_global_uses(self.db, containing_module) else {
-                continue;
-            };
-            for (glob_use, item_visibility) in glob_uses.iter() {
-                let Ok(module_id_found) = self.db.priv_global_use_imported_module(*glob_use) else {
-                    continue;
-                };
-                if peek_visible_in(
-                    self.db.upcast(),
-                    *item_visibility,
-                    containing_module,
-                    user_module,
-                ) {
-                    stack.push((containing_module, module_id_found));
-                    accessible_modules.insert((containing_module, module_id_found));
-                }
-            }
-        }
-
-        let mut visited = UnorderedHashSet::<_>::default();
-        let mut stack = vec![module_id];
-        let mut all_modules = OrderedHashSet::default();
-        // Iterate over all modules that are imported through `use *`.
-        while let Some(curr_module_id) = stack.pop() {
-            if !visited.insert(curr_module_id) {
-                continue;
-            }
-            all_modules.insert(curr_module_id);
-            let Ok(glob_uses) = get_module_global_uses(self.db, curr_module_id) else { continue };
-            for glob_use in glob_uses.keys() {
-                let Ok(module_id_found) = self.db.priv_global_use_imported_module(*glob_use) else {
-                    continue;
-                };
-                stack.push(module_id_found);
-            }
-        }
-        ImportedModules { accessible_modules, all_modules }
     }
 
     /// Given the current resolved item, resolves the next segment.
@@ -1338,10 +1281,20 @@ impl<'db> Resolver<'db> {
         // If the first segment is a name of a crate, use the crate's root module as the base
         // module.
         if let Some(dep) = self.settings.dependencies.get(ident.as_str()) {
-            return ResolvedBase::Crate(
+            let dep_crate_id =
                 CrateLongId::Real { name: ident, discriminator: dep.discriminator.clone() }
-                    .intern(self.db),
-            );
+                    .intern(self.db);
+            let configs = self.db.crate_configs();
+            if !configs.contains_key(&dep_crate_id) {
+                let get_long_id = |crate_id: CrateId| crate_id.lookup_intern(self.db);
+                panic!(
+                    "Invalid crate dependency: {:?}\nconfigured crates: {:#?}",
+                    get_long_id(dep_crate_id),
+                    configs.keys().cloned().map(get_long_id).collect_vec()
+                );
+            }
+
+            return ResolvedBase::Crate(dep_crate_id);
         }
         // If an item with this name is found in one of the 'use *' imports, use the module that
         match self.resolve_path_using_use_star(module_id, identifier) {
@@ -1356,6 +1309,10 @@ impl<'db> Resolver<'db> {
             }
             UseStarResult::PathNotFound => {}
             UseStarResult::ItemNotVisible(module_item_id, containing_modules) => {
+                let prelude = self.prelude_submodule();
+                if let Ok(Some(_)) = self.db.module_item_by_name(prelude, ident) {
+                    return ResolvedBase::Module(prelude);
+                }
                 return ResolvedBase::ItemNotVisible(module_item_id, containing_modules);
             }
         }
@@ -1487,9 +1444,9 @@ impl<'db> Resolver<'db> {
 
         for generic_param in generic_params.iter() {
             let generic_param = SubstitutionRewriter { db: self.db, substitution: &substitution }
-                .rewrite(*generic_param)?;
+                .rewrite(generic_param.clone())?;
             let generic_arg = self.resolve_generic_arg(
-                generic_param,
+                &generic_param,
                 arg_syntax_per_param
                     .get(&generic_param.id())
                     .and_then(|arg_syntax| {
@@ -1573,7 +1530,7 @@ impl<'db> Resolver<'db> {
     /// If a syntax Expr is provided, it will be resolved by type.
     fn resolve_generic_arg(
         &mut self,
-        generic_param: GenericParam,
+        generic_param: &GenericParam,
         generic_arg_syntax_opt: Option<&ast::Expr>,
         stable_ptr: SyntaxStablePtrId,
         diagnostics: &mut SemanticDiagnostics,
@@ -1582,7 +1539,7 @@ impl<'db> Resolver<'db> {
             let lookup_context = self.impl_lookup_context();
             let inference = &mut self.data.inference_data.inference(self.db);
             return inference
-                .infer_generic_arg(&generic_param, lookup_context, Some(stable_ptr))
+                .infer_generic_arg(generic_param, lookup_context, Some(stable_ptr))
                 .map_err(|err_set| {
                     inference.report_on_pending_error(err_set, diagnostics, stable_ptr)
                 });
@@ -1647,6 +1604,22 @@ impl<'db> Resolver<'db> {
                         actual_trt: impl_def_concrete_trait,
                     });
                     self.inference().consume_reported_error(err_set, diag_added);
+                } else {
+                    for (trait_ty, ty1) in param.type_constraints.iter() {
+                        let ty0 = TypeLongId::ImplType(ImplTypeId::new(
+                            resolved_impl,
+                            trait_ty.trait_type(self.db),
+                            self.db,
+                        ))
+                        .intern(self.db);
+                        let _ = self.inference().conform_ty(ty0, *ty1).map_err(|err_set| {
+                            self.inference().report_on_pending_error(
+                                err_set,
+                                diagnostics,
+                                stable_ptr,
+                            )
+                        });
+                    }
                 }
                 GenericArgumentId::Impl(resolved_impl)
             }

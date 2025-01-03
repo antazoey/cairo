@@ -63,9 +63,12 @@ impl UseTree {
     }
 
     /// Merge and organize the `use` paths in a hierarchical structure.
-    /// Additionally returns whether the returned elements are a single leaf.
-    pub fn create_merged_use_items(self, allow_duplicate_uses: bool) -> (Vec<String>, bool) {
-        let mut leaf_paths: Vec<_> = self
+    pub fn create_merged_use_items(
+        self,
+        allow_duplicate_uses: bool,
+        top_level: bool,
+    ) -> Vec<String> {
+        let mut leaf_paths: Vec<String> = self
             .leaves
             .into_iter()
             .map(|leaf| {
@@ -79,17 +82,11 @@ impl UseTree {
 
         let mut nested_paths = vec![];
         for (segment, subtree) in self.children {
-            let (subtree_merged_use_items, is_single_leaf) =
-                subtree.create_merged_use_items(allow_duplicate_uses);
-
-            let formatted_subtree_paths =
-                subtree_merged_use_items.into_iter().map(|child| format!("{segment}::{child}"));
-
-            if is_single_leaf {
-                leaf_paths.extend(formatted_subtree_paths);
-            } else {
-                nested_paths.extend(formatted_subtree_paths);
-            }
+            let subtree_merged_use_items =
+                subtree.create_merged_use_items(allow_duplicate_uses, false);
+            nested_paths.extend(
+                subtree_merged_use_items.into_iter().map(|child| format!("{segment}::{child}")),
+            );
         }
 
         if !allow_duplicate_uses {
@@ -99,12 +96,13 @@ impl UseTree {
 
         match leaf_paths.len() {
             0 => {}
-            1 if nested_paths.is_empty() => return (leaf_paths, true),
+            1 if nested_paths.is_empty() => return leaf_paths,
             1 => nested_paths.extend(leaf_paths),
+            _ if top_level => nested_paths.extend(leaf_paths),
             _ => nested_paths.push(format!("{{{}}}", leaf_paths.join(", "))),
         }
 
-        (nested_paths, false)
+        nested_paths
     }
 
     /// Formats `use` items, creates a virtual file, and parses it into a syntax node.
@@ -115,7 +113,7 @@ impl UseTree {
         decorations: String,
     ) -> SyntaxNode {
         let mut formatted_use_items = String::new();
-        for statement in self.create_merged_use_items(allow_duplicate_uses).0 {
+        for statement in self.create_merged_use_items(allow_duplicate_uses, false) {
             formatted_use_items.push_str(&format!("{decorations}use {statement};\n"));
         }
 
@@ -1037,24 +1035,7 @@ impl<'a> FormatterImpl<'a> {
                 OrderedHashMap::default();
 
             for node in section_nodes {
-                // Check if the node has any non-trivial trivia (i.e., comments).
-                let has_non_whitespace_trivia = !node.descendants(self.db).all(|descendant| {
-                    if descendant.kind(self.db) == SyntaxKind::Trivia {
-                        ast::Trivia::from_syntax_node(self.db, descendant)
-                            .elements(self.db)
-                            .into_iter()
-                            .all(|element| {
-                                matches!(
-                                    element,
-                                    ast::Trivium::Whitespace(_) | ast::Trivium::Newline(_)
-                                )
-                            })
-                    } else {
-                        true
-                    }
-                });
-
-                if has_non_whitespace_trivia {
+                if !self.has_only_whitespace_trivia(node) {
                     new_children.push(node.clone());
                     continue;
                 }
@@ -1097,8 +1078,28 @@ impl<'a> FormatterImpl<'a> {
         *children = new_children;
     }
 
+    /// Returns whether the node has only whitespace trivia.
+    fn has_only_whitespace_trivia(&self, node: &SyntaxNode) -> bool {
+        node.descendants(self.db).all(|descendant| {
+            if descendant.kind(self.db) == SyntaxKind::Trivia {
+                ast::Trivia::from_syntax_node(self.db, descendant)
+                    .elements(self.db)
+                    .into_iter()
+                    .all(|element| {
+                        matches!(element, ast::Trivium::Whitespace(_) | ast::Trivium::Newline(_))
+                    })
+            } else {
+                true
+            }
+        })
+    }
+
     /// Sorting function for `UsePathMulti` children.
     fn sort_inner_use_path(&self, children: &mut Vec<SyntaxNode>) {
+        // If any child has non-trivial trivia, do not sort.
+        if children.iter().any(|child| !self.has_only_whitespace_trivia(child)) {
+            return;
+        }
         // Split list into `use` path parts and TokenComma.
         let (mut sorted_elements, commas): (Vec<_>, Vec<_>) = std::mem::take(children)
             .into_iter()
@@ -1302,11 +1303,19 @@ fn compare_use_paths(a: &UsePath, b: &UsePath, db: &dyn SyntaxGroup) -> Ordering
         // Case for Single vs Single: compare their identifiers, then move to the next segment if
         // equal.
         (UsePath::Single(a_single), UsePath::Single(b_single)) => {
-            match a_single.extract_ident(db).cmp(&b_single.extract_ident(db)) {
-                Ordering::Equal => {
-                    compare_use_paths(&a_single.use_path(db), &b_single.use_path(db), db)
-                }
-                other => other,
+            let a_ident = a_single.extract_ident(db);
+            let b_ident = b_single.extract_ident(db);
+
+            match (a_ident.as_str(), b_ident.as_str()) {
+                ("super" | "crate", "super" | "crate") => a_ident.cmp(&b_ident),
+                ("super" | "crate", _) => Ordering::Greater,
+                (_, "super" | "crate") => Ordering::Less,
+                _ => match a_ident.cmp(&b_ident) {
+                    Ordering::Equal => {
+                        compare_use_paths(&a_single.use_path(db), &b_single.use_path(db), db)
+                    }
+                    other => other,
+                },
             }
         }
 

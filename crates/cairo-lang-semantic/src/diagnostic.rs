@@ -3,7 +3,7 @@ use std::fmt::Display;
 use cairo_lang_debug::DebugWithDb;
 use cairo_lang_defs::diagnostic_utils::StableLocation;
 use cairo_lang_defs::ids::{
-    EnumId, FunctionTitleId, ImplDefId, ImplFunctionId, ModuleId, ModuleItemId,
+    EnumId, FunctionTitleId, GenericKind, ImplDefId, ImplFunctionId, ModuleId, ModuleItemId,
     NamedLanguageElementId, StructId, TopLevelLanguageElementId, TraitFunctionId, TraitId,
     TraitImplId, UseId,
 };
@@ -22,6 +22,7 @@ use crate::corelib::LiteralError;
 use crate::db::SemanticGroup;
 use crate::expr::inference::InferenceError;
 use crate::items::feature_kind::FeatureMarkerDiagnostic;
+use crate::items::trt::ConcreteTraitTypeId;
 use crate::resolve::{ResolvedConcreteItem, ResolvedGenericItem};
 use crate::types::peel_snapshots;
 use crate::{ConcreteTraitId, semantic};
@@ -334,6 +335,47 @@ impl DiagnosticEntry for SemanticDiagnostic {
                     function_name,
                     expected_ty.format(db),
                     actual_ty.format(db)
+                )
+            }
+
+            SemanticDiagnosticKind::WrongGenericParamTraitForImplFunction {
+                impl_def_id,
+                impl_function_id,
+                trait_id,
+                expected_trait,
+                actual_trait,
+            } => {
+                let defs_db = db.upcast();
+                let function_name = impl_function_id.name(defs_db);
+                format!(
+                    "Generic parameter trait of impl function `{}::{}` is incompatible with \
+                     `{}::{}`. Expected: `{:?}`, actual: `{:?}`.",
+                    impl_def_id.name(defs_db),
+                    function_name,
+                    trait_id.name(defs_db),
+                    function_name,
+                    expected_trait.debug(db),
+                    actual_trait.debug(db)
+                )
+            }
+            SemanticDiagnosticKind::WrongGenericParamKindForImplFunction {
+                impl_def_id,
+                impl_function_id,
+                trait_id,
+                expected_kind,
+                actual_kind,
+            } => {
+                let defs_db = db.upcast();
+                let function_name = impl_function_id.name(defs_db);
+                format!(
+                    "Generic parameter kind of impl function `{}::{}` is incompatible with \
+                     `{}::{}`. Expected: `{:?}`, actual: `{:?}`.",
+                    impl_def_id.name(defs_db),
+                    function_name,
+                    trait_id.name(defs_db),
+                    function_name,
+                    expected_kind,
+                    actual_kind
                 )
             }
             SemanticDiagnosticKind::AmbiguousTrait { trait_function_id0, trait_function_id1 } => {
@@ -923,6 +965,25 @@ impl DiagnosticEntry for SemanticDiagnostic {
             SemanticDiagnosticKind::MutableCapturedVariable => {
                 "Capture of mutable variables in a closure is not supported".into()
             }
+            SemanticDiagnosticKind::NonTraitTypeConstrained { identifier, concrete_trait_id } => {
+                format!(
+                    "associated type `{}` not found for `{}`",
+                    identifier,
+                    concrete_trait_id.full_path(db)
+                )
+            }
+            SemanticDiagnosticKind::DuplicateTypeConstraint {
+                concrete_trait_type_id: trait_type_id,
+            } => {
+                format!(
+                    "the value of the associated type `{}` in trait `{}` is already specified",
+                    trait_type_id.trait_type(db).name(db.upcast()),
+                    trait_type_id.concrete_trait(db).full_path(db)
+                )
+            }
+            SemanticDiagnosticKind::TypeConstraintsSyntaxNotEnabled => {
+                "Type constraints syntax is not enabled in the current crate.".into()
+            }
         }
     }
 
@@ -1049,6 +1110,20 @@ pub enum SemanticDiagnosticKind {
         impl_function_id: ImplFunctionId,
         trait_id: TraitId,
         expected_name: SmolStr,
+    },
+    WrongGenericParamTraitForImplFunction {
+        impl_def_id: ImplDefId,
+        impl_function_id: ImplFunctionId,
+        trait_id: TraitId,
+        expected_trait: ConcreteTraitId,
+        actual_trait: ConcreteTraitId,
+    },
+    WrongGenericParamKindForImplFunction {
+        impl_def_id: ImplDefId,
+        impl_function_id: ImplFunctionId,
+        trait_id: TraitId,
+        expected_kind: GenericKind,
+        actual_kind: GenericKind,
     },
     WrongType {
         expected_ty: semantic::TypeId,
@@ -1297,6 +1372,14 @@ pub enum SemanticDiagnosticKind {
     },
     RefClosureArgument,
     MutableCapturedVariable,
+    NonTraitTypeConstrained {
+        identifier: SmolStr,
+        concrete_trait_id: ConcreteTraitId,
+    },
+    DuplicateTypeConstraint {
+        concrete_trait_type_id: ConcreteTraitTypeId,
+    },
+    TypeConstraintsSyntaxNotEnabled,
 }
 
 /// The kind of an expression with multiple possible return types.
@@ -1315,6 +1398,8 @@ impl SemanticDiagnosticKind {
                 error_code!(E0002)
             }
             Self::MissingMember(_) => error_code!(E0003),
+            Self::MissingItemsInImpl(_) => error_code!(E0004),
+            Self::ModuleFileNotFound(_) => error_code!(E0005),
             _ => return None,
         })
     }
