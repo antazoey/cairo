@@ -5,12 +5,15 @@ mod test;
 use std::sync::Arc;
 
 use cairo_lang_defs::ids::{ExternFunctionId, FreeFunctionId};
+use cairo_lang_semantic::corelib::try_extract_nz_wrapped_type;
 use cairo_lang_semantic::helper::ModuleHelper;
 use cairo_lang_semantic::items::constant::{ConstCalcInfo, ConstValue};
 use cairo_lang_semantic::items::functions::{GenericFunctionId, GenericFunctionWithBodyId};
 use cairo_lang_semantic::items::imp::ImplLookupContext;
 use cairo_lang_semantic::types::TypeSizeInformation;
-use cairo_lang_semantic::{GenericArgumentId, MatchArmSelector, TypeId, TypeLongId, corelib};
+use cairo_lang_semantic::{
+    ConcreteTypeId, GenericArgumentId, MatchArmSelector, TypeId, TypeLongId, corelib,
+};
 use cairo_lang_utils::byte_array::BYTE_ARRAY_MAGIC;
 use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
 use cairo_lang_utils::ordered_hash_set::OrderedHashSet;
@@ -21,7 +24,7 @@ use itertools::{chain, zip_eq};
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::cast::ToPrimitive;
-use num_traits::{Num, Zero};
+use num_traits::{Num, One, Zero};
 
 use crate::db::LoweringGroup;
 use crate::ids::{
@@ -216,7 +219,7 @@ pub fn const_folding(
                 }
                 Statement::EnumConstruct(StatementEnumConstruct { variant, input, output }) => {
                     if let Some(VarInfo::Const(val)) = ctx.var_info.get(&input.var_id) {
-                        let value = ConstValue::Enum(variant.clone(), val.clone().into());
+                        let value = ConstValue::Enum(*variant, val.clone().into());
                         ctx.var_info.insert(*output, VarInfo::Const(value.clone()));
                     }
                 }
@@ -242,6 +245,27 @@ pub fn const_folding(
                                 .insert(arm.var_ids[0], VarInfo::Const(value.as_ref().clone()));
                         }
                     }
+                    MatchInfo::Value(info) => {
+                        if let Some(value) =
+                            ctx.as_int(info.input.var_id).and_then(|x| x.to_usize())
+                        {
+                            if let Some(arm) = info.arms.iter().find(|arm| {
+                                matches!(
+                                    &arm.arm_selector,
+                                    MatchArmSelector::Value(v) if v.value == value
+                                )
+                            }) {
+                                // Create the variable that was previously introduced in match arm.
+                                block.statements.push(Statement::StructConstruct(
+                                    StatementStructConstruct {
+                                        inputs: vec![],
+                                        output: arm.var_ids[0],
+                                    },
+                                ));
+                                block.end = BlockEnd::Goto(arm.block_id, Default::default());
+                            }
+                        }
+                    }
                     MatchInfo::Extern(info) => {
                         if let Some((extra_stmts, updated_end)) = ctx.handle_extern_block_end(info)
                         {
@@ -249,7 +273,6 @@ pub fn const_folding(
                             block.end = updated_end;
                         }
                     }
-                    MatchInfo::Value(..) => {}
                 }
             }
             BlockEnd::Return(ref mut inputs, _) => ctx.maybe_replace_inputs(inputs),
@@ -581,10 +604,14 @@ impl ConstFoldingContext<'_> {
         output: VariableId,
         nz_ty: bool,
     ) -> Statement {
-        let mut value = ConstValue::Int(value, self.variables[output].ty);
-        if nz_ty {
-            value = ConstValue::NonZero(Box::new(value));
-        }
+        let ty = self.variables[output].ty;
+        let value = if nz_ty {
+            let inner_ty =
+                try_extract_nz_wrapped_type(self.db, ty).expect("Expected a non-zero type");
+            ConstValue::NonZero(Box::new(ConstValue::Int(value, inner_ty)))
+        } else {
+            ConstValue::Int(value, ty)
+        };
         self.var_info.insert(output, VarInfo::Const(value.clone()));
         Statement::Const(StatementConst { value, output })
     }
@@ -717,6 +744,44 @@ impl ConstFoldingContext<'_> {
                     let arm = &info.arms[0];
                     self.var_info.insert(arm.var_ids[0], VarInfo::Var(info.inputs[0]));
                     return Some((vec![], BlockEnd::Goto(arm.block_id, Default::default())));
+                }
+                if rhs.is_one() && !self.diff_fns.contains(&id) {
+                    let ty = self.variables[info.arms[0].var_ids[0]].ty;
+                    let ty_info = self.type_value_ranges.get(&ty)?;
+                    let function = if self.uadd_fns.contains(&id) || self.iadd_fns.contains(&id) {
+                        ty_info.inc?
+                    } else {
+                        ty_info.dec?
+                    };
+                    let enum_ty = function.signature(db).ok()?.return_type;
+                    let TypeLongId::Concrete(ConcreteTypeId::Enum(concrete_enum_id)) =
+                        enum_ty.lookup_intern(db)
+                    else {
+                        return None;
+                    };
+                    let result = self.variables.alloc(Variable::new(
+                        db,
+                        ImplLookupContext::default(),
+                        function.signature(db).unwrap().return_type,
+                        info.location,
+                    ));
+                    return Some((
+                        vec![Statement::Call(StatementCall {
+                            function,
+                            inputs: vec![info.inputs[0]],
+                            with_coupon: false,
+                            outputs: vec![result],
+                            location: info.location,
+                        })],
+                        BlockEnd::Match {
+                            info: MatchInfo::Enum(MatchEnumInfo {
+                                concrete_enum_id,
+                                input: VarUsage { var_id: result, location: info.location },
+                                arms: core::mem::take(&mut info.arms),
+                                location: info.location,
+                            }),
+                        },
+                    ));
                 }
             }
             if let Some(lhs) = lhs {
@@ -1014,7 +1079,9 @@ impl ConstFoldingLibfuncInfo {
         let core = ModuleHelper::core(db);
         let box_module = core.submodule("box");
         let integer_module = core.submodule("integer");
-        let bounded_int_module = core.submodule("internal").submodule("bounded_int");
+        let internal_module = core.submodule("internal");
+        let bounded_int_module = internal_module.submodule("bounded_int");
+        let num_module = internal_module.submodule("num");
         let array_module = core.submodule("array");
         let starknet_module = core.submodule("starknet");
         let storage_access_module = starknet_module.submodule("storage_access");
@@ -1059,20 +1126,26 @@ impl ConstFoldingLibfuncInfo {
         ));
         let type_value_ranges = OrderedHashMap::from_iter(
             [
-                ("u8", BigInt::ZERO, u8::MAX.into(), false),
-                ("u16", BigInt::ZERO, u16::MAX.into(), false),
-                ("u32", BigInt::ZERO, u32::MAX.into(), false),
-                ("u64", BigInt::ZERO, u64::MAX.into(), false),
-                ("u128", BigInt::ZERO, u128::MAX.into(), false),
-                ("u256", BigInt::ZERO, BigInt::from(1) << 256, false),
-                ("i8", i8::MIN.into(), i8::MAX.into(), true),
-                ("i16", i16::MIN.into(), i16::MAX.into(), true),
-                ("i32", i32::MIN.into(), i32::MAX.into(), true),
-                ("i64", i64::MIN.into(), i64::MAX.into(), true),
-                ("i128", i128::MIN.into(), i128::MAX.into(), true),
+                ("u8", BigInt::ZERO, u8::MAX.into(), false, true),
+                ("u16", BigInt::ZERO, u16::MAX.into(), false, true),
+                ("u32", BigInt::ZERO, u32::MAX.into(), false, true),
+                ("u64", BigInt::ZERO, u64::MAX.into(), false, true),
+                ("u128", BigInt::ZERO, u128::MAX.into(), false, true),
+                ("u256", BigInt::ZERO, BigInt::from(1) << 256, false, false),
+                ("i8", i8::MIN.into(), i8::MAX.into(), true, true),
+                ("i16", i16::MIN.into(), i16::MAX.into(), true, true),
+                ("i32", i32::MIN.into(), i32::MAX.into(), true, true),
+                ("i64", i64::MIN.into(), i64::MAX.into(), true, true),
+                ("i128", i128::MIN.into(), i128::MAX.into(), true, true),
             ]
             .map(
-                |(ty_name, min, max, as_bounded_int): (&str, BigInt, BigInt, bool)| {
+                |(ty_name, min, max, as_bounded_int, inc_dec): (
+                    &str,
+                    BigInt,
+                    BigInt,
+                    bool,
+                    bool,
+                )| {
                     let ty = corelib::get_core_ty_by_name(db, ty_name.into(), vec![]);
                     let is_zero = if as_bounded_int {
                         bounded_int_module
@@ -1081,7 +1154,23 @@ impl ConstFoldingLibfuncInfo {
                         integer_module.function_id(format!("{ty_name}_is_zero"), vec![])
                     }
                     .lowered(db);
-                    let info = TypeInfo { range: TypeRange { min, max }, is_zero };
+                    let (inc, dec) = if inc_dec {
+                        (
+                            Some(
+                                num_module
+                                    .function_id(format!("{ty_name}_inc"), vec![])
+                                    .lowered(db),
+                            ),
+                            Some(
+                                num_module
+                                    .function_id(format!("{ty_name}_dec"), vec![])
+                                    .lowered(db),
+                            ),
+                        )
+                    } else {
+                        (None, None)
+                    };
+                    let info = TypeInfo { range: TypeRange { min, max }, is_zero, inc, dec };
                     (ty, info)
                 },
             ),
@@ -1147,6 +1236,10 @@ struct TypeInfo {
     range: TypeRange,
     /// The function to check if the value is zero for the type.
     is_zero: FunctionId,
+    /// Inc function to increase the value by one.
+    inc: Option<FunctionId>,
+    /// Dec function to decrease the value by one.
+    dec: Option<FunctionId>,
 }
 
 /// The range of values of a numeric type.

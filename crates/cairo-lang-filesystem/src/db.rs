@@ -401,21 +401,21 @@ pub fn get_originating_location(
 /// returned. Otherwise, the function will try to find a span that is a result of a concatenation of
 /// multiple consecutive mappings.
 pub fn translate_location(code_mapping: &[CodeMapping], span: TextSpan) -> Option<TextSpan> {
-    // Find all mappings that have non-empty intersection with the provided span.
-    let intersecting_mappings = || {
-        code_mapping.iter().filter(|mapping| {
-            // Omit mappings to the left or to the right of current span.
-            !(mapping.span.end < span.start || mapping.span.start > span.end)
-        })
-    };
-
     // If any of the mappings fully contains the span, return the origin span of the mapping.
-    if let Some(containing) = intersecting_mappings().find(|mapping| {
+    if let Some(containing) = code_mapping.iter().find(|mapping| {
         mapping.span.contains(span) && !matches!(mapping.origin, CodeOrigin::CallSite(_))
     }) {
         // Found a span that fully contains the current one - translates it.
         return containing.translate(span);
     }
+
+    // Find all mappings that have non-empty intersection with the provided span.
+    let intersecting_mappings = || {
+        code_mapping.iter().filter(|mapping| {
+            // Omit mappings to the left or to the right of current span.
+            mapping.span.end > span.start && mapping.span.start < span.end
+        })
+    };
 
     // Call site can be treated as default origin.
     let call_site = intersecting_mappings()
@@ -450,7 +450,7 @@ pub fn translate_location(code_mapping: &[CodeMapping], span: TextSpan) -> Optio
         let last_origin =
             last.origin.as_span().expect("mappings with start origin should be filtered out");
         // Make sure, the origins are consecutive.
-        if mapping_origin.start < last_origin.end {
+        if mapping_origin.start > last_origin.end {
             break;
         }
 
